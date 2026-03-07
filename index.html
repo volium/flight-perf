@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Offline aircraft performance calculator for general aviation">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>Flight Perf — Performance Calculator</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/responsive.css">
+
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="app-header__title">
+      FlightPerf
+      <span class="app-header__aircraft" id="aircraft-name">Loading…</span>
+    </div>
+    <div class="app-header__actions">
+      <button class="btn-icon" id="btn-settings" aria-label="Settings" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- ── Tab Bar ── -->
+  <nav class="tab-bar" id="tab-bar" role="tablist" aria-label="Calculations">
+    <button role="tab" class="tab-bar__tab" data-tab="takeoff"      aria-selected="true"  aria-controls="panel-takeoff"      tabindex="0">Takeoff</button>
+    <button role="tab" class="tab-bar__tab" data-tab="landing"      aria-selected="false" aria-controls="panel-landing"      tabindex="-1">Landing</button>
+    <button role="tab" class="tab-bar__tab" data-tab="climb"        aria-selected="false" aria-controls="panel-climb"        tabindex="-1">Climb</button>
+    <button role="tab" class="tab-bar__tab" data-tab="cruise"       aria-selected="false" aria-controls="panel-cruise"       tabindex="-1">Cruise</button>
+    <button role="tab" class="tab-bar__tab" data-tab="wb"           aria-selected="false" aria-controls="panel-wb"           tabindex="-1">W&amp;B</button>
+    <button role="tab" class="tab-bar__tab" data-tab="density"      aria-selected="false" aria-controls="panel-density"      tabindex="-1">Density Alt</button>
+    <button role="tab" class="tab-bar__tab" data-tab="crosswind"    aria-selected="false" aria-controls="panel-crosswind"    tabindex="-1">Crosswind</button>
+    <button role="tab" class="tab-bar__tab" data-tab="fuel"         aria-selected="false" aria-controls="panel-fuel"         tabindex="-1">Fuel</button>
+  </nav>
+
+  <!-- ── Main Content ── -->
+  <main class="app-main" id="tab-panels">
+
+    <!-- ── Takeoff ── -->
+    <section id="panel-takeoff" role="tabpanel" aria-labelledby="tab-takeoff" aria-hidden="false" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Takeoff Inputs</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">🛫</div>
+            <div class="placeholder-message__text">Takeoff calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="takeoff-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Landing ── -->
+    <section id="panel-landing" role="tabpanel" aria-labelledby="tab-landing" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Landing Inputs</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">🛬</div>
+            <div class="placeholder-message__text">Landing calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="landing-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Climb ── -->
+    <section id="panel-climb" role="tabpanel" aria-labelledby="tab-climb" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Climb Inputs</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">📈</div>
+            <div class="placeholder-message__text">Climb calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="climb-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Cruise ── -->
+    <section id="panel-cruise" role="tabpanel" aria-labelledby="tab-cruise" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Cruise Inputs</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">✈️</div>
+            <div class="placeholder-message__text">Cruise calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="cruise-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Weight & Balance ── -->
+    <section id="panel-wb" role="tabpanel" aria-labelledby="tab-wb" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Weight &amp; Balance</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">⚖️</div>
+            <div class="placeholder-message__text">W&amp;B calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">CG Envelope</h2>
+          <div id="wb-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Density Altitude ── -->
+    <section id="panel-density" role="tabpanel" aria-labelledby="tab-density" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Density Altitude</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">🌡️</div>
+            <div class="placeholder-message__text">Density altitude calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="density-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Crosswind ── -->
+    <section id="panel-crosswind" role="tabpanel" aria-labelledby="tab-crosswind" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Crosswind Component</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">💨</div>
+            <div class="placeholder-message__text">Crosswind calculator — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="crosswind-results"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Fuel ── -->
+    <section id="panel-fuel" role="tabpanel" aria-labelledby="tab-fuel" aria-hidden="true" class="tab-panel">
+      <div class="tab-panel__layout">
+        <div class="panel">
+          <h2 class="panel__title">Fuel Planning</h2>
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">⛽</div>
+            <div class="placeholder-message__text">Fuel planner — coming soon</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel__title">Results</h2>
+          <div id="fuel-results"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Settings Overlay ── -->
+  <div class="settings-overlay" id="settings-overlay" aria-hidden="true">
+    <aside class="settings-panel" id="settings-panel" aria-label="Settings">
+      <div class="settings-panel__header">
+        <h2 class="settings-panel__title">Settings</h2>
+        <button class="btn-icon settings-panel__close" aria-label="Close settings">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="setting-theme">Theme</label>
+        <select class="form-input" id="setting-theme">
+          <option value="auto">System default</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="setting-profile">Aircraft Profile</label>
+        <select class="form-input" id="setting-profile">
+          <option value="profiles/sling-lsa.json">Sling LSA — N246LT</option>
+        </select>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer class="app-footer">
+    <span>flight-perf v0.1</span>
+    <span class="offline-indicator">
+      <span class="offline-indicator__dot"></span>
+      <span class="offline-indicator__label">Checking…</span>
+    </span>
+  </footer>
+
+</body>
+</html>

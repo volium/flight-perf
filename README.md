@@ -26,13 +26,53 @@
 # Clone the repository
 git clone https://github.com/<your-username>/flight-perf.git
 cd flight-perf
+```
 
-# Open in browser (no build step needed)
-open index.html
+The app uses ES Modules, which require an HTTP server — opening `index.html` directly via `file://` will not work. Choose one of the options below to serve the app locally.
 
-# Or use a local dev server
+### Option 1: Node.js (`npx serve`)
+
+If you don't have Node.js installed, install it first via [Homebrew](https://brew.sh/) (macOS):
+
+```bash
+# Install Homebrew (skip if already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Node.js (includes npm and npx)
+brew install node
+```
+
+Then serve the app:
+
+```bash
 npx serve .
 ```
+
+Open the URL shown in the terminal (typically `http://localhost:3000`).
+
+### Option 2: Python (`http.server`)
+
+Python 3 is pre-installed on macOS. No additional setup required:
+
+```bash
+python3 -m http.server 8000
+```
+
+Open `http://localhost:8000` in your browser.
+
+### Option 3: PHP built-in server
+
+If PHP is available on your system:
+
+```bash
+php -S localhost:8000
+```
+
+Open `http://localhost:8000` in your browser.
+
+### Option 4: VS Code Live Server
+
+If you use VS Code, install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension and click **Go Live** in the status bar.
 
 ## Project Status
 
