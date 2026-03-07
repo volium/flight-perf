@@ -293,6 +293,22 @@ select.form-input {
   margin-left: var(--space-sm);
 }
 
+.results-list__item--highlight {
+  background-color: var(--color-bg-result);
+  margin: 0 calc(-1 * var(--space-md));
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--border-radius);
+}
+
+.results-list__value--caution {
+  color: var(--color-warning);
+}
+
+.results-list__value--danger {
+  color: var(--color-error);
+  font-weight: var(--font-weight-bold);
+}
+
 /* ── Alerts ── */
 .alert {
   display: flex;

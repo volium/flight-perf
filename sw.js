@@ -10,6 +10,8 @@ const APP_SHELL = [
   './js/app.js',
   './js/ui/tabs.js',
   './js/ui/settings.js',
+  './js/ui/density-altitude.js',
+  './js/calc/density-altitude.js',
   './js/engine/units.js',
   './js/data/fuel-types.js',
   './js/data/profile-loader.js',

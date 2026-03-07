@@ -1,5 +1,6 @@
 import { initTabs } from './ui/tabs.js';
 import { initSettings } from './ui/settings.js';
+import { initDensityAltitude } from './ui/density-altitude.js';
 import { loadProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
 
@@ -30,11 +31,17 @@ async function init() {
     updateAircraftDisplay(null);
   }
 
+  initCalculators();
+
   updateOnlineStatus();
   window.addEventListener('online', updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
 
   registerServiceWorker();
+}
+
+function initCalculators() {
+  initDensityAltitude(document.getElementById('panel-density'));
 }
 
 function updateAircraftDisplay(profile) {
