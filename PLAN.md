@@ -148,11 +148,14 @@ Build a **modern, lightweight, offline-first** web application that performs per
 Aircraft manufacturers provide performance data in wildly different formats:
 
 - **Tabular data** — e.g., Cessna POH tables with rows of altitude/temperature vs. distances.
+- **Reference tables** — e.g., Sling LSA provides a single reference condition (ISA, MTOW) with variants by surface type, without altitude/temperature interpolation.
 - **Graph-derived data** — e.g., Piper charts where you enter on one axis, trace to a curve, then read the other axis. These are digitized into data point arrays.
 - **Formulas** — some simple calculations can be expressed as equations (e.g., density altitude).
 - **Correction factors** — "add 10% for each 1,000 ft above sea level."
 
 The profile format must accommodate **all** of these approaches via a unified schema.
+
+> **Note on obstacle height:** The FAA standard uses a 50 ft obstacle for takeoff/landing distance calculations. ICAO and many international manufacturers (including Sling Aircraft) use a 15 m (~49.2 ft) obstacle. The profile specifies the obstacle height used, and the UI labels adapt accordingly.
 
 ### Profile JSON Schema (v1)
 
@@ -180,6 +183,17 @@ The profile format must accommodate **all** of these approaches via a unified sc
     "vs0":                { "value": 39,   "unit": "kias" },
     "vs1":                { "value": 45,   "unit": "kias" },
     "maxCrosswind":       { "value": 15,   "unit": "kt" }
+  },
+
+  // Fuel configuration — type, density, tanks, and preferred input unit
+  "fuel": {
+    "type": "100LL",                              // references a built-in fuel type
+    "inputUnit": "us_gal",                        // how the pilot enters fuel: "L", "us_gal", "kg", "lbs"
+    "capacity": { "value": 26, "unit": "us_gal" },
+    "tanks": [
+      { "name": "Left Wing",  "capacity": { "value": 13, "unit": "us_gal" } },
+      { "name": "Right Wing", "capacity": { "value": 13, "unit": "us_gal" } }
+    ]
   },
 
   "stations": [
@@ -315,10 +329,55 @@ The profile format must accommodate **all** of these approaches via a unified sc
 
 | Method | Description | Use Case |
 |--------|-------------|----------|
-| `table_interpolation` | Multi-dimensional table with linear interpolation between points | Most POH tables |
+| `table_interpolation` | Multi-dimensional table with linear interpolation between points | Cessna POH altitude/temp tables, climb rate by altitude, cruise speed by altitude/RPM |
+| `reference_table` | Single reference condition with categorical variants (e.g., surface type) — no interpolation between rows | Sling LSA takeoff/landing (ISA, MTOW, variants by surface) |
 | `graph_points` | Ordered (x,y) pairs digitized from a performance graph, with curve interpolation | Koch chart, climb graph |
 | `formula` | A mathematical expression with named variables | Density altitude, crosswind |
-| `correction_chain` | Base value from another method, then sequential correction factors applied | Takeoff distance with adjustments |
+| `correction_chain` | Base value from another method, then sequential correction factors applied | Takeoff distance with wind/slope/weight adjustments |
+
+### Fuel Types & Density
+
+Fuel weight is critical for W&B calculations. Different fuel types have different densities, and even the same fuel type can vary slightly with temperature. The app ships with a **built-in fuel type registry** that profiles reference by type ID. Users can also override the density or define a custom fuel type.
+
+#### Built-in Fuel Types
+
+| Type ID | Name | Density (kg/L) | Density (lbs/US gal) | Typical Use |
+|---------|------|---------------|---------------------|-------------|
+| `100LL` | 100LL Avgas | 0.721 | 6.02 | Most piston GA aircraft |
+| `91UL` | 91 UL Avgas | 0.715 | 5.97 | Unleaded avgas for approved engines |
+| `94UL` | 94 UL Avgas | 0.715 | 5.97 | Unleaded avgas |
+| `MOGAS` | Motor Gasoline (Auto Fuel) | 0.740 | 6.18 | STC-approved engines |
+| `JET_A` | Jet-A / Jet-A1 | 0.804 | 6.71 | Turbine engines, some diesel piston |
+| `DIESEL` | Diesel / Jet Fuel (piston) | 0.840 | 7.01 | Diesel aviation engines |
+| `CUSTOM` | Custom Fuel | *(user-defined)* | *(user-defined)* | Any non-standard fuel |
+
+> **Density note:** The values above are standard reference densities at 15 °C (59 °F). Real density varies with temperature. For W&B purposes, standard density is used unless the user explicitly overrides it. This matches standard industry practice (FAA uses 6.0 lbs/US gal for 100LL as a simplified reference).
+
+#### How Fuel Configuration Works
+
+The **profile** specifies:
+- `fuel.type` — references a built-in fuel type (provides default density)
+- `fuel.inputUnit` — how the pilot typically enters fuel for this aircraft: `"L"`, `"us_gal"`, `"kg"`, or `"lbs"`
+- `fuel.capacity` — total fuel capacity in the profile's preferred unit
+- `fuel.tanks` — individual tank definitions (for W&B and fuel management)
+
+The **user settings** (stored in `localStorage`, not in the profile) can override:
+- The fuel type (e.g., switch from 100LL to MOGAS)
+- The density values (e.g., use a specific measured density)
+- The input unit (e.g., pilot prefers gallons even though the profile defaults to litres)
+
+This separation means the profile defines what the aircraft *expects*, while user settings capture the pilot's *preferences* and real-world conditions.
+
+#### Fuel Input Unit Preference
+
+The `fuel.inputUnit` field controls how the fuel input field is labeled and what unit the pilot enters. The calculation engine always converts to weight (kg or lbs) internally using the active fuel density:
+
+| `inputUnit` | Pilot enters | Conversion to weight |
+|-------------|-------------|---------------------|
+| `"L"` | Litres | weight = litres × density_kg_per_L |
+| `"us_gal"` | US Gallons | weight = gallons × density_lbs_per_gal |
+| `"kg"` | Kilograms | direct (no conversion) |
+| `"lbs"` | Pounds | direct (no conversion) |
 
 ### Profile Management
 
@@ -347,19 +406,25 @@ ISA_Temp          = 15 - (2 × Pressure Altitude / 1000)
 
 **Inputs:** Pressure altitude, OAT, weight, wind component, runway surface, runway slope
 
-**Method:** Table interpolation from profile data + correction chain
+**Method:** Depends on profile data availability:
+
+- **`table_interpolation`** — When the profile provides a multi-dimensional table (altitude × temperature → distances), interpolate to find base values. Typical of Cessna/Piper POHs.
+- **`reference_table`** — When the profile provides distances at a single reference condition (e.g., ISA, MTOW) with surface-type variants. Typical of simpler POHs (Sling LSA). The user selects the surface type and gets the corresponding values directly.
 
 **Steps:**
-1. Interpolate base ground roll and 50-ft obstacle distance from the altitude/temperature table.
+1. Look up or interpolate base ground roll and obstacle clearance distance from the profile data.
 2. Apply weight correction (if profile provides it).
 3. Apply wind correction (headwind reduces, tailwind increases).
-4. Apply surface correction (grass, soft field).
+4. Apply surface correction (if using `table_interpolation` — `reference_table` profiles already include surface variants).
 5. Apply slope correction if provided.
-6. Return final ground roll and total distance.
+6. Apply safety margins (if configured).
+7. Return final ground roll and total distance.
+
+> **Obstacle height:** The profile specifies the obstacle height used (50 ft FAA / 15 m ICAO). The UI adapts labels accordingly ("distance over 50 ft" vs. "distance over 15 m").
 
 ### 5.3 Landing Distance
 
-Same structure as takeoff but with landing-specific data and corrections.
+Same structure as takeoff — supports both `table_interpolation` and `reference_table` methods, with landing-specific data and corrections.
 
 ### 5.4 Rate of Climb
 
@@ -371,11 +436,23 @@ Same structure as takeoff but with landing-specific data and corrections.
 
 ### 5.5 Cruise Performance
 
-**Inputs:** Pressure altitude, power setting (% or RPM)
+**Inputs:** Pressure altitude, power setting (RPM)
 
-**Method:** Table interpolation
+**Method:** Table interpolation (2D — altitude × RPM)
 
-**Output:** True Airspeed (TAS), fuel flow (GPH), range, endurance
+**Output:** Indicated Airspeed (KIAS), True Airspeed (KTAS)
+
+> **Note:** Some profiles (e.g., Cessna) may include fuel flow in the cruise table. Others (e.g., Sling LSA) provide fuel consumption in a separate table. The profile schema supports both patterns.
+
+### 5.5.1 Fuel Consumption
+
+**Inputs:** Engine RPM (power setting), fuel quantity on board
+
+**Method:** Table interpolation (1D — RPM)
+
+**Output:** Fuel flow (L/hr and/or GPH), endurance, range
+
+The fuel consumption table may be defined at a specific reference altitude (e.g., 3,000 ft ISA). The profile records this reference condition so the UI can display it. Endurance and range in the profile are pre-computed reference values; the app recalculates them based on actual fuel on board.
 
 ### 5.6 Weight & Balance
 
@@ -943,6 +1020,7 @@ flight-perf/
 │   └── data/
 │       ├── profile-loader.js   # Load & validate aircraft profiles
 │       ├── profile-schema.js   # JSON schema definition for validation
+│       ├── fuel-types.js       # Built-in fuel type registry & density lookup
 │       └── storage.js          # localStorage / IndexedDB abstraction
 │
 ├── profiles/
@@ -961,6 +1039,7 @@ flight-perf/
     ├── envelope.test.js
     ├── crosswind.test.js
     ├── margins.test.js
+    ├── fuel-types.test.js
     └── units.test.js
 ```
 
