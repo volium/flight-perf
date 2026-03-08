@@ -71,19 +71,22 @@ function updateAircraftDisplay(profile) {
   }
 }
 
-function updateOnlineStatus() {
+async function updateOnlineStatus() {
   const dot = document.querySelector('.offline-indicator__dot');
   const label = document.querySelector('.offline-indicator__label');
   if (!dot || !label) return;
 
-  const swReady = 'serviceWorker' in navigator;
-  if (swReady) {
-    dot.classList.remove('offline-indicator__dot--offline');
-    label.textContent = 'Offline Ready';
-  } else {
-    dot.classList.add('offline-indicator__dot--offline');
-    label.textContent = 'Online Only';
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg?.active) {
+      dot.classList.remove('offline-indicator__dot--offline');
+      label.textContent = 'Offline Ready';
+      return;
+    }
   }
+
+  dot.classList.add('offline-indicator__dot--offline');
+  label.textContent = 'Online Only';
 }
 
 async function registerServiceWorker() {
