@@ -162,14 +162,21 @@ function renderResults(el, r, wb) {
 
   const weightClass = r.overweight ? 'results-list__value--danger' : '';
   const envelopeOk = r.withinAny;
-  const cgClass = envelopeOk ? '' : 'results-list__value--danger';
+  const cgOk = r.cgInAnyRange;
+  const cgClass = envelopeOk ? '' : (cgOk ? 'results-list__value--caution' : 'results-list__value--danger');
 
-  const envLabels = r.envelopes
-    .filter((e) => e.within)
-    .map((e) => e.name)
-    .join(', ');
-  const envStatus = envelopeOk ? envLabels : 'OUTSIDE LIMITS';
-  const envClass = envelopeOk ? 'results-list__value--ok' : 'results-list__value--danger';
+  let envStatus, envClass;
+  if (envelopeOk) {
+    const envLabels = r.envelopes.filter((e) => e.within).map((e) => e.name).join(', ');
+    envStatus = envLabels;
+    envClass = 'results-list__value--ok';
+  } else if (r.overweight && cgOk) {
+    envStatus = 'OVERWEIGHT';
+    envClass = 'results-list__value--danger';
+  } else {
+    envStatus = 'OUTSIDE LIMITS';
+    envClass = 'results-list__value--danger';
+  }
 
   let html = renderEnvelopeChart(r, wb);
 
@@ -203,8 +210,10 @@ function renderResults(el, r, wb) {
     html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(r.weightRemaining), 1)} ${wu}.</div>`;
   }
 
-  if (!r.withinAny) {
-    html += `<div class="alert alert--error">⚠ CG is outside all defined envelopes. Aircraft may be uncontrollable.</div>`;
+  if (!r.withinAny && !cgOk) {
+    html += `<div class="alert alert--error">⚠ CG is outside allowable range. Aircraft may be uncontrollable.</div>`;
+  } else if (!r.withinAny && cgOk && !r.overweight) {
+    html += `<div class="alert alert--error">⚠ Weight/CG combination is outside the defined envelope.</div>`;
   }
 
   for (const s of r.stations) {

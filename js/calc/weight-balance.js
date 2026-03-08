@@ -94,12 +94,14 @@ export function calculateWeightBalance(profile, inputs) {
       name: env.name,
       color: env.color,
       within: pointInPolygon(totalWeightRounded, cgForEnvelope, convertedPoints),
+      cgInRange: cgInRange(cgForEnvelope, convertedPoints),
       points: convertedPoints,
     };
   });
 
   const withinAny = envelopeResults.some((e) => e.within);
   const withinAll = envelopeResults.every((e) => e.within);
+  const cgInAnyRange = envelopeResults.some((e) => e.cgInRange);
 
   // Check baggage constraints (convert limits to display weight unit)
   const constraintWarnings = checkBaggageConstraints(wb.baggageConstraints, stationWeights, profileWU, wu);
@@ -124,6 +126,7 @@ export function calculateWeightBalance(profile, inputs) {
     })),
     withinAny,
     withinAll,
+    cgInAnyRange,
     overweight,
     maxWeight,
     weightRemaining: Math.round(weightRemaining * 10) / 10,
@@ -208,6 +211,18 @@ function pointInPolygon(weight, cg, points) {
   }
 
   return inside;
+}
+
+/**
+ * Check if a CG value falls within the CG range of an envelope,
+ * regardless of weight. Used to distinguish "overweight but CG is fine"
+ * from "CG is actually out of range."
+ */
+function cgInRange(cg, points) {
+  const cgValues = points.map((pt) => pt.cg);
+  const cgMin = Math.min(...cgValues);
+  const cgMax = Math.max(...cgValues);
+  return cg >= cgMin && cg <= cgMax;
 }
 
 /**
