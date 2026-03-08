@@ -99,7 +99,7 @@ export function initLanding(panelEl) {
       ...marginCtrl.saveState(),
     });
 
-    const results = calculateLanding(profile, {
+    const results = calculateLanding(getProfile(), {
       surface,
       margins: marginCtrl.buildMargins(),
       distanceUnit: unitEl.value,

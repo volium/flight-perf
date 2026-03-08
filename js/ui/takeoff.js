@@ -99,7 +99,7 @@ export function initTakeoff(panelEl) {
       ...marginCtrl.saveState(),
     });
 
-    const results = calculateTakeoff(profile, {
+    const results = calculateTakeoff(getProfile(), {
       surface,
       margins: marginCtrl.buildMargins(),
       distanceUnit: unitEl.value,

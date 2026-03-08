@@ -110,7 +110,7 @@ export function initWeightBalance(panelEl) {
     const toSave = { ...stationWeights, _fuel: fuelEl.value };
     storage.set(STORAGE_KEY, toSave);
 
-    const results = calculateWeightBalance(profile, {
+    const results = calculateWeightBalance(getProfile(), {
       stationWeights,
       fuelQuantity: fuelQty,
     });

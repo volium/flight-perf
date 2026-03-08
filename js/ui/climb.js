@@ -212,7 +212,7 @@ export function initClimb(panelEl) {
       cruiseClimbSpeed: cruiseSpeedEl.value,
     });
 
-    const results = calculateClimbPlan(profile, {
+    const results = calculateClimbPlan(getProfile(), {
       departureElevation: depFt,
       targetElevation: tgtFt,
       altimeter: altInHg,

@@ -145,7 +145,7 @@ export function initCruise(panelEl) {
       rpm: rpmEl.value,
     });
 
-    const results = calculateCruise(profile, {
+    const results = calculateCruise(getProfile(), {
       fieldElevation: altFt,
       altimeter: altInHg,
       rpm,

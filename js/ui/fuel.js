@@ -190,7 +190,7 @@ export function initFuel(panelEl) {
       reserveMinutes: reserveEl.value,
     });
 
-    const results = calculateFuelPlan(profile, {
+    const results = calculateFuelPlan(getProfile(), {
       tripDistance: dist,
       cruiseAltitude: altFt,
       altimeter: altInHg,
