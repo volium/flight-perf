@@ -403,7 +403,7 @@ function renderDiagram(r) {
     const baseX = cx + wlR * Math.sin(windRad);
     const baseY = cy - wlR * Math.cos(windRad);
     const pxDir = Math.cos(windRad), pyDir = Math.sin(windRad);
-    const wlOff = 20;
+    const wlOff = 30;
 
     // Two candidate positions (perpendicular to arrow, both sides)
     const aX = baseX + pxDir * wlOff, aY = baseY + pyDir * wlOff;
