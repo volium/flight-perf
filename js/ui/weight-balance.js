@@ -1,8 +1,9 @@
 import { calculateWeightBalance } from '../calc/weight-balance.js';
-import { formatNumber } from '../engine/units.js';
+import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { displayUnit, esc } from './perf-ui-common.js';
+import { getUnits, fuelUnitLabel } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'wb_inputs';
 
@@ -18,20 +19,27 @@ export function initWeightBalance(panelEl) {
     return;
   }
 
+  const units = getUnits();
   const saved = storage.get(STORAGE_KEY, {});
   const fuelConfig = profile.fuel;
-  const fuelUnit = fuelConfig?.inputUnit || 'L';
-  const fuelLabel = fuelUnitLabel(fuelUnit);
-  const weightUnit = wb.weightUnit || 'kg';
+  const fuelLabel = fuelUnitLabel(units.fuel);
+  const weightUnit = units.weight;
+  const profileWeightUnit = wb.weightUnit || 'kg';
 
   const nonFuelStations = wb.stations.filter((s) => !s.fuelStation);
+
+  // Convert profile values to display weight unit
+  const emptyWeightDisplay = convertWeight(profile.limits.emptyWeight.value, profileWeightUnit, weightUnit);
+  const maxTakeoffDisplay = convertWeight(profile.limits.maxTakeoffWeight.value, profileWeightUnit, weightUnit);
 
   let stationHTML = '';
   for (const station of nonFuelStations) {
     const savedVal = saved[station.id] ?? '';
-    const maxNote = station.maxWeight
-      ? `<div class="form-hint">Max: ${station.maxWeight.value} ${displayUnit(station.maxWeight.unit)}</div>`
-      : '';
+    let maxNote = '';
+    if (station.maxWeight) {
+      const maxDisplay = convertWeight(station.maxWeight.value, station.maxWeight.unit || profileWeightUnit, weightUnit);
+      maxNote = `<div class="form-hint">Max: ${formatNumber(maxDisplay)} ${weightUnit}</div>`;
+    }
 
     stationHTML += `
       <div class="form-group">
@@ -46,10 +54,9 @@ export function initWeightBalance(panelEl) {
       </div>`;
   }
 
-  const maxFuel = fuelConfig?.capacity;
-  const maxFuelInInputUnit = getMaxFuelInInputUnit(fuelConfig);
-  const maxFuelNote = maxFuel
-    ? `<div class="form-hint">Capacity: ${maxFuel.value} ${maxFuel.unit}${maxFuel.valueUSGal ? ` (${maxFuel.valueUSGal} US gal)` : ''}</div>`
+  const maxFuelDisplay = getFuelMax(fuelConfig, units.fuel);
+  const maxFuelNote = maxFuelDisplay
+    ? `<div class="form-hint">Capacity: ${maxFuelDisplay} ${fuelLabel}</div>`
     : '';
 
   panelEl.innerHTML = `
@@ -57,7 +64,7 @@ export function initWeightBalance(panelEl) {
       <div class="panel">
         <h2 class="panel__title">Weight &amp; Balance</h2>
 
-        <div class="wb-section-label">Empty Weight: ${formatNumber(profile.limits.emptyWeight.value, 1)} ${weightUnit}</div>
+        <div class="wb-section-label">Empty Weight: ${formatNumber(emptyWeightDisplay, 1)} ${weightUnit}</div>
 
         ${stationHTML}
 
@@ -65,7 +72,7 @@ export function initWeightBalance(panelEl) {
           <label class="form-label" for="wb-fuel">Fuel</label>
           <div class="form-suffix">
             <input class="form-input" id="wb-fuel" type="number" inputmode="decimal"
-                   min="0" max="${maxFuelInInputUnit}" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
+                   min="0" max="${maxFuelDisplay}" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
             <span class="form-suffix__label">${fuelLabel}</span>
           </div>
           ${maxFuelNote}
@@ -92,27 +99,46 @@ export function initWeightBalance(panelEl) {
 
   fuelEl.addEventListener('change', () => {
     const val = parseFloat(fuelEl.value);
-    if (!isNaN(val) && val > maxFuelInInputUnit) {
-      fuelEl.value = maxFuelInInputUnit;
+    if (!isNaN(val) && val > maxFuelDisplay) {
+      fuelEl.value = maxFuelDisplay;
     }
   });
 
   function calculate() {
+    const currentUnits = getUnits();
     const stationWeights = {};
     for (const station of nonFuelStations) {
       const el = panelEl.querySelector(`#wb-${station.id}`);
-      stationWeights[station.id] = parseFloat(el?.value) || 0;
+      let val = parseFloat(el?.value) || 0;
+      // Convert input weight to profile weight unit for the calc engine
+      if (currentUnits.weight !== profileWeightUnit) {
+        val = convertWeight(val, currentUnits.weight, profileWeightUnit);
+      }
+      stationWeights[station.id] = val;
     }
 
     const fuelQty = parseFloat(fuelEl.value) || 0;
 
-    // Save inputs
-    const toSave = { ...stationWeights, _fuel: fuelEl.value };
+    // Convert fuel to profile's native fuel unit for the calc engine
+    let fuelForCalc = fuelQty;
+    const profileFuelUnit = fuelConfig?.inputUnit || 'us_gal';
+    if (currentUnits.fuel !== profileFuelUnit) {
+      if (currentUnits.fuel === 'L' && profileFuelUnit === 'us_gal') fuelForCalc = convert.lToUSGal(fuelQty);
+      else if (currentUnits.fuel === 'us_gal' && profileFuelUnit === 'L') fuelForCalc = convert.usGalToL(fuelQty);
+    }
+
+    // Save inputs (in display units — conversion happens on calculate)
+    const toSave = {};
+    for (const station of nonFuelStations) {
+      const el = panelEl.querySelector(`#wb-${station.id}`);
+      toSave[station.id] = el?.value || '';
+    }
+    toSave._fuel = fuelEl.value;
     storage.set(STORAGE_KEY, toSave);
 
     const results = calculateWeightBalance(getProfile(), {
       stationWeights,
-      fuelQuantity: fuelQty,
+      fuelQuantity: fuelForCalc,
     });
 
     if (results.error) {
@@ -120,7 +146,7 @@ export function initWeightBalance(panelEl) {
       return;
     }
 
-    renderResults(resultsEl, results, wb);
+    renderResults(resultsEl, results, wb, currentUnits.weight);
   }
 
   calcBtn.addEventListener('click', calculate);
@@ -131,15 +157,20 @@ export function initWeightBalance(panelEl) {
     }
   });
 
-  // Auto-calculate if any saved values exist
   const hasSaved = Object.values(saved).some((v) => v !== '' && v != null);
   if (hasSaved) {
     calculate();
   }
 }
 
-function renderResults(el, r, wb) {
+function renderResults(el, r, wb, displayWeightUnit) {
   const cgLabel = r.cgReference === 'percent_mac' ? `${r.cgPercent}% MAC` : `${r.cgArm} ${r.armUnit}`;
+  const profileWU = r.weightUnit;
+  const wu = displayWeightUnit;
+
+  const totalDisplay = convertWeight(r.totalWeight, profileWU, wu);
+  const maxDisplay = convertWeight(r.maxWeight, profileWU, wu);
+  const remainDisplay = convertWeight(r.weightRemaining, profileWU, wu);
 
   const weightClass = r.overweight ? 'results-list__value--danger' : '';
   const envelopeOk = r.withinAny;
@@ -159,15 +190,15 @@ function renderResults(el, r, wb) {
   html += `
     <li class="results-list__item results-list__item--highlight">
       <span class="results-list__label">Total Weight</span>
-      <span class="results-list__value ${weightClass}">${formatNumber(r.totalWeight, 1)} ${r.weightUnit}</span>
+      <span class="results-list__value ${weightClass}">${formatNumber(totalDisplay, 1)} ${wu}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Max Takeoff Weight</span>
-      <span class="results-list__value">${formatNumber(r.maxWeight)} ${r.weightUnit}</span>
+      <span class="results-list__value">${formatNumber(maxDisplay)} ${wu}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Weight Remaining</span>
-      <span class="results-list__value ${weightClass}">${r.overweight ? '−' : ''}${formatNumber(Math.abs(r.weightRemaining), 1)} ${r.weightUnit}</span>
+      <span class="results-list__value ${weightClass}">${r.overweight ? '−' : ''}${formatNumber(Math.abs(remainDisplay), 1)} ${wu}</span>
     </li>
     <li class="results-list__item results-list__item--highlight">
       <span class="results-list__label">CG Position</span>
@@ -180,9 +211,8 @@ function renderResults(el, r, wb) {
 
   html += `</ul>`;
 
-  // Warnings
   if (r.overweight) {
-    html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(r.weightRemaining), 1)} ${r.weightUnit}.</div>`;
+    html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(remainDisplay), 1)} ${wu}.</div>`;
   }
 
   if (!r.withinAny) {
@@ -191,15 +221,28 @@ function renderResults(el, r, wb) {
 
   for (const s of r.stations) {
     if (s.overweight) {
-      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(s.weight, 1)} / ${formatNumber(s.maxWeight)} ${r.weightUnit}).</div>`;
+      const sWeightDisplay = convertWeight(s.weight, profileWU, wu);
+      const sMaxDisplay = convertWeight(s.maxWeight, profileWU, wu);
+      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(sWeightDisplay, 1)} / ${formatNumber(sMaxDisplay)} ${wu}).</div>`;
     }
   }
 
   for (const w of r.constraintWarnings) {
-    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(w.combined, 1)} / ${w.max} ${w.unit}).</div>`;
+    const cDisplay = convertWeight(w.combined, w.unit, wu);
+    const mDisplay = convertWeight(w.max, w.unit, wu);
+    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(cDisplay, 1)} / ${formatNumber(mDisplay)} ${wu}).</div>`;
   }
 
   el.innerHTML = html;
+}
+
+/* ── Weight Conversion ── */
+
+function convertWeight(value, fromUnit, toUnit) {
+  if (fromUnit === toUnit) return value;
+  if (fromUnit === 'kg' && toUnit === 'lbs') return convert.kgToLbs(value);
+  if (fromUnit === 'lbs' && toUnit === 'kg') return convert.lbsToKg(value);
+  return value;
 }
 
 /* ── SVG Envelope Chart ── */
@@ -210,7 +253,6 @@ function renderEnvelopeChart(r, wb) {
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
-  // Determine axis ranges from all envelope points
   let allWeights = [], allCGs = [];
   for (const env of r.envelopePoints) {
     for (const pt of env.points) {
@@ -231,7 +273,6 @@ function renderEnvelopeChart(r, wb) {
 
   let svg = `<svg class="wb-chart__svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
 
-  // Grid lines
   svg += '<g class="wb-grid">';
   const wStep = niceStep(wMax - wMin, 5);
   for (let w = Math.ceil(wMin / wStep) * wStep; w <= wMax; w += wStep) {
@@ -247,12 +288,10 @@ function renderEnvelopeChart(r, wb) {
   }
   svg += '</g>';
 
-  // Axis labels
   const cgAxisLabel = r.cgReference === 'percent_mac' ? 'CG (% MAC)' : `CG (${r.armUnit})`;
   svg += `<text x="${pad.left + plotW / 2}" y="${H - 4}" text-anchor="middle" class="wb-chart__axis-label">${cgAxisLabel}</text>`;
   svg += `<text x="14" y="${pad.top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" class="wb-chart__axis-label" transform="rotate(-90, 14, ${pad.top + plotH / 2})">Weight (${r.weightUnit})</text>`;
 
-  // Envelope polygons
   for (const env of r.envelopePoints) {
     const polyPoints = env.points
       .map((pt) => `${scaleX(pt.cg).toFixed(1)},${scaleY(pt.weight).toFixed(1)}`)
@@ -260,7 +299,6 @@ function renderEnvelopeChart(r, wb) {
     svg += `<polygon points="${polyPoints}" fill="${env.color}" fill-opacity="0.15" stroke="${env.color}" stroke-width="1.5"/>`;
   }
 
-  // CG point
   const ptCg = r.cgReference === 'percent_mac' ? r.cgPercent : r.cgArm;
   const px = scaleX(ptCg);
   const py = scaleY(r.totalWeight);
@@ -269,7 +307,6 @@ function renderEnvelopeChart(r, wb) {
   svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
   svg += `<text x="${px.toFixed(1)}" y="${(py - 10).toFixed(1)}" text-anchor="middle" class="wb-chart__point-label" fill="${ptColor}">${formatNumber(r.totalWeight, 1)} ${r.weightUnit}</text>`;
 
-  // Plot border
   svg += `<rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}" fill="none" stroke="#94a3b8" stroke-width="0.5"/>`;
 
   svg += '</svg>';
@@ -289,24 +326,14 @@ function niceStep(range, targetTicks) {
   return step * pow;
 }
 
-function fuelUnitLabel(unit) {
-  switch (unit) {
-    case 'us_gal': return 'US gal';
-    case 'L': return 'L';
-    case 'kg': return 'kg';
-    case 'lbs': return 'lbs';
-    default: return unit;
-  }
-}
-
-function getMaxFuelInInputUnit(fuelConfig) {
+function getFuelMax(fuelConfig, fuelUnit) {
   if (!fuelConfig?.capacity) return '';
   const cap = fuelConfig.capacity;
-  const inputUnit = fuelConfig.inputUnit || 'L';
-
-  if (inputUnit === cap.unit) return cap.value;
-  if (inputUnit === 'us_gal' && cap.valueUSGal) return cap.valueUSGal;
-  if (inputUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
-  if (inputUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
+  if (fuelUnit === cap.unit) return cap.value;
+  if (fuelUnit === 'us_gal' && cap.valueUSGal) return cap.valueUSGal;
+  if (fuelUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
+  if (fuelUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
+  if (fuelUnit === 'L' && cap.valueUSGal) return Math.round(cap.valueUSGal * 3.78541 * 10) / 10;
+  if (fuelUnit === 'L') return cap.value;
   return cap.value;
 }

@@ -2,77 +2,47 @@ import { calculateDensityAltitude } from '../calc/density-altitude.js';
 import { formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { esc } from './perf-ui-common.js';
+import { getUnits, elevationPlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'density_inputs';
 
-const DEFAULTS = {
-  fieldElevation: '',
-  elevUnit: 'ft',
-  altimeter: '29.92',
-  altimeterUnit: 'inHg',
-  oat: '',
-  tempUnit: 'C',
-};
-
 export function initDensityAltitude(panelEl) {
-  const saved = storage.get(STORAGE_KEY, DEFAULTS);
+  const units = getUnits();
+  const saved = storage.get(STORAGE_KEY, {});
+
+  const fieldElev = saved.fieldElevation ?? '';
+  const alt = saved.altimeter ?? altimeterDefault(units.altimeter);
+  const oat = saved.oat ?? '';
 
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
       <div class="panel">
         <h2 class="panel__title">Density Altitude</h2>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="da-field-elev">Field Elevation</label>
-            <div class="form-suffix">
-              <input class="form-input" id="da-field-elev" type="number" inputmode="numeric"
-                     placeholder="${saved.elevUnit === 'm' ? 'e.g. 365' : 'e.g. 1200'}" value="${esc(saved.fieldElevation)}">
-              <span class="form-suffix__label" id="da-elev-suffix">${saved.elevUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="da-elev-unit">Unit</label>
-            <select class="form-input" id="da-elev-unit">
-              <option value="ft" ${saved.elevUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.elevUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="da-field-elev">Field Elevation</label>
+          <div class="form-suffix">
+            <input class="form-input" id="da-field-elev" type="number" inputmode="numeric"
+                   placeholder="${elevationPlaceholder(units.altitude)}" value="${esc(fieldElev)}">
+            <span class="form-suffix__label">${units.altitude}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="da-oat">Outside Air Temp (OAT)</label>
-            <div class="form-suffix">
-              <input class="form-input" id="da-oat" type="number" inputmode="decimal"
-                     placeholder="e.g. 30" value="${esc(saved.oat)}">
-              <span class="form-suffix__label" id="da-temp-suffix">°${saved.tempUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="da-temp-unit">Unit</label>
-            <select class="form-input" id="da-temp-unit">
-              <option value="C" ${saved.tempUnit === 'C' ? 'selected' : ''}>°C</option>
-              <option value="F" ${saved.tempUnit === 'F' ? 'selected' : ''}>°F</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="da-oat">Outside Air Temp (OAT)</label>
+          <div class="form-suffix">
+            <input class="form-input" id="da-oat" type="number" inputmode="decimal"
+                   placeholder="e.g. 30" value="${esc(oat)}">
+            <span class="form-suffix__label">°${units.temperature}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="da-altimeter">Altimeter Setting</label>
-            <div class="form-suffix">
-              <input class="form-input" id="da-altimeter" type="number" inputmode="decimal"
-                     step="0.01" placeholder="29.92" value="${esc(saved.altimeter)}">
-              <span class="form-suffix__label" id="da-alt-suffix">${saved.altimeterUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="da-alt-unit">Unit</label>
-            <select class="form-input" id="da-alt-unit">
-              <option value="inHg" ${saved.altimeterUnit === 'inHg' ? 'selected' : ''}>inHg</option>
-              <option value="hPa" ${saved.altimeterUnit === 'hPa' ? 'selected' : ''}>hPa</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="da-altimeter">Altimeter Setting</label>
+          <div class="form-suffix">
+            <input class="form-input" id="da-altimeter" type="number" inputmode="decimal"
+                   step="0.01" placeholder="${altimeterPlaceholder(units.altimeter)}" value="${esc(alt)}">
+            <span class="form-suffix__label">${units.altimeter}</span>
           </div>
         </div>
 
@@ -92,34 +62,14 @@ export function initDensityAltitude(panelEl) {
   `;
 
   const elev = panelEl.querySelector('#da-field-elev');
-  const elevUnit = panelEl.querySelector('#da-elev-unit');
-  const elevSuffix = panelEl.querySelector('#da-elev-suffix');
-  const oat = panelEl.querySelector('#da-oat');
-  const tempUnit = panelEl.querySelector('#da-temp-unit');
-  const tempSuffix = panelEl.querySelector('#da-temp-suffix');
+  const oatEl = panelEl.querySelector('#da-oat');
   const altimeter = panelEl.querySelector('#da-altimeter');
-  const altUnit = panelEl.querySelector('#da-alt-unit');
-  const altSuffix = panelEl.querySelector('#da-alt-suffix');
   const calcBtn = panelEl.querySelector('#da-calculate');
   const resultsEl = panelEl.querySelector('#da-results');
 
-  elevUnit.addEventListener('change', () => {
-    elevSuffix.textContent = elevUnit.value;
-    elev.placeholder = elevUnit.value === 'm' ? 'e.g. 365' : 'e.g. 1200';
-  });
-
-  tempUnit.addEventListener('change', () => {
-    tempSuffix.textContent = `°${tempUnit.value}`;
-  });
-
-  altUnit.addEventListener('change', () => {
-    altSuffix.textContent = altUnit.value;
-    altimeter.placeholder = altUnit.value === 'hPa' ? '1013.25' : '29.92';
-  });
-
   function calculate() {
     const fieldElevation = parseFloat(elev.value);
-    const oatVal = parseFloat(oat.value);
+    const oatVal = parseFloat(oatEl.value);
     const altVal = parseFloat(altimeter.value);
 
     if (isNaN(fieldElevation) || isNaN(oatVal) || isNaN(altVal)) {
@@ -129,22 +79,21 @@ export function initDensityAltitude(panelEl) {
       return;
     }
 
+    const currentUnits = getUnits();
+
     storage.set(STORAGE_KEY, {
       fieldElevation: elev.value,
-      elevUnit: elevUnit.value,
       altimeter: altimeter.value,
-      altimeterUnit: altUnit.value,
-      oat: oat.value,
-      tempUnit: tempUnit.value,
+      oat: oatEl.value,
     });
 
     const results = calculateDensityAltitude({
       fieldElevation,
-      elevUnit: elevUnit.value,
+      elevUnit: currentUnits.altitude,
       altimeter: altVal,
-      altimeterUnit: altUnit.value,
+      altimeterUnit: currentUnits.altimeter,
       oat: oatVal,
-      tempUnit: tempUnit.value,
+      tempUnit: currentUnits.temperature,
     });
 
     renderResults(resultsEl, results);

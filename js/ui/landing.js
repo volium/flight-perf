@@ -7,6 +7,7 @@ import {
   renderDistanceResults,
   buildRefNote,
 } from './perf-ui-common.js';
+import { getUnits } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'landing_inputs';
 
@@ -16,7 +17,6 @@ const DEFAULTS = {
   marginPctValue: '',
   marginFixedValue: '',
   marginRoundUp: false,
-  distanceUnit: 'ft',
 };
 
 export function initLanding(panelEl) {
@@ -51,14 +51,6 @@ export function initLanding(panelEl) {
           <select class="form-input" id="ld-surface">${surfaceOptions}</select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="ld-unit">Distance Unit</label>
-          <select class="form-input" id="ld-unit">
-            <option value="ft" ${saved.distanceUnit === 'ft' ? 'selected' : ''}>ft</option>
-            <option value="m" ${saved.distanceUnit === 'm' ? 'selected' : ''}>m</option>
-          </select>
-        </div>
-
         ${marginFieldsetHTML('ld', saved)}
 
         <button class="btn btn-primary btn-block" id="ld-calculate">Calculate</button>
@@ -79,12 +71,10 @@ export function initLanding(panelEl) {
   `;
 
   const surfaceEl = panelEl.querySelector('#ld-surface');
-  const unitEl = panelEl.querySelector('#ld-unit');
   const calcBtn = panelEl.querySelector('#ld-calculate');
   const resultsEl = panelEl.querySelector('#ld-results');
 
-  const marginCtrl = initMarginFieldset(panelEl, 'ld', saved, () => unitEl.value);
-  unitEl.addEventListener('change', () => marginCtrl.updateUI());
+  const marginCtrl = initMarginFieldset(panelEl, 'ld', saved, () => getUnits().distance);
 
   function calculate() {
     const surface = surfaceEl.value;
@@ -95,14 +85,13 @@ export function initLanding(panelEl) {
 
     storage.set(STORAGE_KEY, {
       surface: surfaceEl.value,
-      distanceUnit: unitEl.value,
       ...marginCtrl.saveState(),
     });
 
     const results = calculateLanding(getProfile(), {
       surface,
       margins: marginCtrl.buildMargins(),
-      distanceUnit: unitEl.value,
+      distanceUnit: getUnits().distance,
     });
 
     if (results.error) {

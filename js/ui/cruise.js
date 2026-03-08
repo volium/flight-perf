@@ -3,20 +3,14 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { buildRefNote, esc } from './perf-ui-common.js';
+import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'cruise_inputs';
 
-const DEFAULTS = {
-  altitude: '',
-  altUnit: 'ft',
-  altimeter: '29.92',
-  altimeterUnit: 'inHg',
-  rpm: '',
-};
-
 export function initCruise(panelEl) {
   const profile = getProfile();
-  const saved = { ...DEFAULTS, ...storage.get(STORAGE_KEY, DEFAULTS) };
+  const units = getUnits();
+  const saved = storage.get(STORAGE_KEY, {});
   const cruise = profile?.performance?.cruise;
 
   if (!cruise) {
@@ -32,44 +26,29 @@ export function initCruise(panelEl) {
     .map((r) => `<option value="${r}" ${saved.rpm === String(r) ? 'selected' : ''}>${formatNumber(r)} RPM</option>`)
     .join('');
 
+  const alt = saved.altitude ?? '';
+  const altm = saved.altimeter ?? altimeterDefault(units.altimeter);
+
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
       <div class="panel">
         <h2 class="panel__title">Cruise Performance</h2>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="cr-alt">Cruise Altitude</label>
-            <div class="form-suffix">
-              <input class="form-input" id="cr-alt" type="number" inputmode="numeric"
-                     placeholder="${saved.altUnit === 'm' ? 'e.g. 1500' : 'e.g. 5000'}" value="${esc(saved.altitude)}">
-              <span class="form-suffix__label" id="cr-alt-suffix">${saved.altUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cr-alt-unit">Unit</label>
-            <select class="form-input" id="cr-alt-unit">
-              <option value="ft" ${saved.altUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.altUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="cr-alt">Cruise Altitude</label>
+          <div class="form-suffix">
+            <input class="form-input" id="cr-alt" type="number" inputmode="numeric"
+                   placeholder="${altitudePlaceholder(units.altitude)}" value="${esc(alt)}">
+            <span class="form-suffix__label">${units.altitude}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="cr-altimeter">Altimeter Setting</label>
-            <div class="form-suffix">
-              <input class="form-input" id="cr-altimeter" type="number" inputmode="decimal"
-                     step="0.01" placeholder="${saved.altimeterUnit === 'hPa' ? '1013.25' : '29.92'}" value="${esc(saved.altimeter)}">
-              <span class="form-suffix__label" id="cr-altimeter-suffix">${saved.altimeterUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cr-altimeter-unit">Unit</label>
-            <select class="form-input" id="cr-altimeter-unit">
-              <option value="inHg" ${saved.altimeterUnit === 'inHg' ? 'selected' : ''}>inHg</option>
-              <option value="hPa" ${saved.altimeterUnit === 'hPa' ? 'selected' : ''}>hPa</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="cr-altimeter">Altimeter Setting</label>
+          <div class="form-suffix">
+            <input class="form-input" id="cr-altimeter" type="number" inputmode="decimal"
+                   step="0.01" placeholder="${altimeterPlaceholder(units.altimeter)}" value="${esc(altm)}">
+            <span class="form-suffix__label">${units.altimeter}</span>
           </div>
         </div>
 
@@ -100,26 +79,13 @@ export function initCruise(panelEl) {
   `;
 
   const altEl = panelEl.querySelector('#cr-alt');
-  const altUnitEl = panelEl.querySelector('#cr-alt-unit');
-  const altSuffix = panelEl.querySelector('#cr-alt-suffix');
   const altimeterEl = panelEl.querySelector('#cr-altimeter');
-  const altimeterUnitEl = panelEl.querySelector('#cr-altimeter-unit');
-  const altimeterSuffix = panelEl.querySelector('#cr-altimeter-suffix');
   const rpmEl = panelEl.querySelector('#cr-rpm');
   const calcBtn = panelEl.querySelector('#cr-calculate');
   const resultsEl = panelEl.querySelector('#cr-results');
 
-  altUnitEl.addEventListener('change', () => {
-    altSuffix.textContent = altUnitEl.value;
-    altEl.placeholder = altUnitEl.value === 'm' ? 'e.g. 1500' : 'e.g. 5000';
-  });
-
-  altimeterUnitEl.addEventListener('change', () => {
-    altimeterSuffix.textContent = altimeterUnitEl.value;
-    altimeterEl.placeholder = altimeterUnitEl.value === 'hPa' ? '1013.25' : '29.92';
-  });
-
   function calculate() {
+    const currentUnits = getUnits();
     const altRaw = parseFloat(altEl.value);
     const altimeterRaw = parseFloat(altimeterEl.value);
     const rpm = parseFloat(rpmEl.value);
@@ -134,14 +100,12 @@ export function initCruise(panelEl) {
       return;
     }
 
-    const altFt = altUnitEl.value === 'm' ? convert.mToFt(altRaw) : altRaw;
-    const altInHg = altimeterUnitEl.value === 'hPa' ? convert.hPaToInHg(altimeterRaw) : altimeterRaw;
+    const altFt = currentUnits.altitude === 'm' ? convert.mToFt(altRaw) : altRaw;
+    const altInHg = currentUnits.altimeter === 'hPa' ? convert.hPaToInHg(altimeterRaw) : altimeterRaw;
 
     storage.set(STORAGE_KEY, {
       altitude: altEl.value,
-      altUnit: altUnitEl.value,
       altimeter: altimeterEl.value,
-      altimeterUnit: altimeterUnitEl.value,
       rpm: rpmEl.value,
     });
 

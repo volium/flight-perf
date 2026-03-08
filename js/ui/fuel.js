@@ -3,23 +3,14 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { esc } from './perf-ui-common.js';
+import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, fuelUnitLabel } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'fuel_inputs';
 
-const DEFAULTS = {
-  tripDistance: '',
-  cruiseAltitude: '',
-  altUnit: 'ft',
-  altimeter: '29.92',
-  altimeterUnit: 'inHg',
-  rpm: '',
-  fuelOnBoard: '',
-  reserveMinutes: '45',
-};
-
 export function initFuel(panelEl) {
   const profile = getProfile();
-  const saved = { ...DEFAULTS, ...storage.get(STORAGE_KEY, DEFAULTS) };
+  const units = getUnits();
+  const saved = storage.get(STORAGE_KEY, {});
   const fuel = profile?.performance?.fuelConsumption;
 
   if (!fuel) {
@@ -31,14 +22,16 @@ export function initFuel(panelEl) {
   }
 
   const fuelConfig = profile.fuel;
-  const fuelUnit = fuelConfig?.inputUnit || 'L';
-  const fuelLabel = fuelUnit === 'us_gal' ? 'US gal' : fuelUnit;
-  const maxFuel = getFuelMax(fuelConfig);
+  const fuelLabel = fuelUnitLabel(units.fuel);
+  const maxFuel = getFuelMax(fuelConfig, units.fuel);
 
   const rpmValues = [...new Set(fuel.data.map((d) => d.rpm))].sort((a, b) => a - b);
   const rpmOptions = rpmValues
     .map((r) => `<option value="${r}" ${saved.rpm === String(r) ? 'selected' : ''}>${formatNumber(r)} RPM</option>`)
     .join('');
+
+  const cruiseAlt = saved.cruiseAltitude ?? '';
+  const altm = saved.altimeter ?? altimeterDefault(units.altimeter);
 
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
@@ -49,44 +42,26 @@ export function initFuel(panelEl) {
           <label class="form-label" for="fp-distance">Trip Distance</label>
           <div class="form-suffix">
             <input class="form-input" id="fp-distance" type="number" inputmode="numeric"
-                   min="0" placeholder="e.g. 150" value="${esc(saved.tripDistance)}">
+                   min="0" placeholder="e.g. 150" value="${esc(saved.tripDistance ?? '')}">
             <span class="form-suffix__label">NM</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="fp-alt">Cruise Altitude</label>
-            <div class="form-suffix">
-              <input class="form-input" id="fp-alt" type="number" inputmode="numeric"
-                     placeholder="${saved.altUnit === 'm' ? 'e.g. 1500' : 'e.g. 5000'}" value="${esc(saved.cruiseAltitude)}">
-              <span class="form-suffix__label" id="fp-alt-suffix">${saved.altUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="fp-alt-unit">Unit</label>
-            <select class="form-input" id="fp-alt-unit">
-              <option value="ft" ${saved.altUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.altUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="fp-alt">Cruise Altitude</label>
+          <div class="form-suffix">
+            <input class="form-input" id="fp-alt" type="number" inputmode="numeric"
+                   placeholder="${altitudePlaceholder(units.altitude)}" value="${esc(cruiseAlt)}">
+            <span class="form-suffix__label">${units.altitude}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="fp-altimeter">Altimeter Setting</label>
-            <div class="form-suffix">
-              <input class="form-input" id="fp-altimeter" type="number" inputmode="decimal"
-                     step="0.01" placeholder="${saved.altimeterUnit === 'hPa' ? '1013.25' : '29.92'}" value="${esc(saved.altimeter)}">
-              <span class="form-suffix__label" id="fp-altimeter-suffix">${saved.altimeterUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="fp-altimeter-unit">Unit</label>
-            <select class="form-input" id="fp-altimeter-unit">
-              <option value="inHg" ${saved.altimeterUnit === 'inHg' ? 'selected' : ''}>inHg</option>
-              <option value="hPa" ${saved.altimeterUnit === 'hPa' ? 'selected' : ''}>hPa</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="fp-altimeter">Altimeter Setting</label>
+          <div class="form-suffix">
+            <input class="form-input" id="fp-altimeter" type="number" inputmode="decimal"
+                   step="0.01" placeholder="${altimeterPlaceholder(units.altimeter)}" value="${esc(altm)}">
+            <span class="form-suffix__label">${units.altimeter}</span>
           </div>
         </div>
 
@@ -102,7 +77,7 @@ export function initFuel(panelEl) {
           <label class="form-label" for="fp-fob">Fuel On Board</label>
           <div class="form-suffix">
             <input class="form-input" id="fp-fob" type="number" inputmode="decimal"
-                   min="0" max="${maxFuel}" step="0.1" placeholder="e.g. ${maxFuel}" value="${esc(saved.fuelOnBoard)}">
+                   min="0" max="${maxFuel}" step="0.1" placeholder="e.g. ${maxFuel}" value="${esc(saved.fuelOnBoard ?? '')}">
             <span class="form-suffix__label">${fuelLabel}</span>
           </div>
           <div class="form-hint">Capacity: ${maxFuel} ${fuelLabel}</div>
@@ -112,7 +87,7 @@ export function initFuel(panelEl) {
           <label class="form-label" for="fp-reserve">Fuel Reserve</label>
           <div class="form-suffix">
             <input class="form-input" id="fp-reserve" type="number" inputmode="numeric"
-                   min="0" step="5" placeholder="e.g. 45" value="${esc(saved.reserveMinutes)}">
+                   min="0" step="5" placeholder="e.g. 45" value="${esc(saved.reserveMinutes ?? '45')}">
             <span class="form-suffix__label">min</span>
           </div>
           <div class="form-hint">VFR day: 30 min · VFR night: 45 min · IFR: 45 min</div>
@@ -135,26 +110,12 @@ export function initFuel(panelEl) {
 
   const distEl = panelEl.querySelector('#fp-distance');
   const altEl = panelEl.querySelector('#fp-alt');
-  const altUnitEl = panelEl.querySelector('#fp-alt-unit');
-  const altSuffix = panelEl.querySelector('#fp-alt-suffix');
   const altimeterEl = panelEl.querySelector('#fp-altimeter');
-  const altimeterUnitEl = panelEl.querySelector('#fp-altimeter-unit');
-  const altimeterSuffix = panelEl.querySelector('#fp-altimeter-suffix');
   const rpmEl = panelEl.querySelector('#fp-rpm');
   const fobEl = panelEl.querySelector('#fp-fob');
   const reserveEl = panelEl.querySelector('#fp-reserve');
   const calcBtn = panelEl.querySelector('#fp-calculate');
   const resultsEl = panelEl.querySelector('#fp-results');
-
-  altUnitEl.addEventListener('change', () => {
-    altSuffix.textContent = altUnitEl.value;
-    altEl.placeholder = altUnitEl.value === 'm' ? 'e.g. 1500' : 'e.g. 5000';
-  });
-
-  altimeterUnitEl.addEventListener('change', () => {
-    altimeterSuffix.textContent = altimeterUnitEl.value;
-    altimeterEl.placeholder = altimeterUnitEl.value === 'hPa' ? '1013.25' : '29.92';
-  });
 
   fobEl.addEventListener('change', () => {
     const val = parseFloat(fobEl.value);
@@ -164,6 +125,7 @@ export function initFuel(panelEl) {
   });
 
   function calculate() {
+    const currentUnits = getUnits();
     const dist = parseFloat(distEl.value);
     const altRaw = parseFloat(altEl.value);
     const altimeterRaw = parseFloat(altimeterEl.value);
@@ -176,15 +138,21 @@ export function initFuel(panelEl) {
       return;
     }
 
-    const altFt = altUnitEl.value === 'm' ? convert.mToFt(altRaw) : altRaw;
-    const altInHg = altimeterUnitEl.value === 'hPa' ? convert.hPaToInHg(altimeterRaw) : altimeterRaw;
+    const altFt = currentUnits.altitude === 'm' ? convert.mToFt(altRaw) : altRaw;
+    const altInHg = currentUnits.altimeter === 'hPa' ? convert.hPaToInHg(altimeterRaw) : altimeterRaw;
+
+    // Convert fuel on board to the profile's native fuel input unit for the calc engine
+    let fobForCalc = fob;
+    const profileFuelUnit = profile.fuel?.inputUnit || 'us_gal';
+    if (currentUnits.fuel !== profileFuelUnit) {
+      if (currentUnits.fuel === 'L' && profileFuelUnit === 'us_gal') fobForCalc = convert.lToUSGal(fob);
+      else if (currentUnits.fuel === 'us_gal' && profileFuelUnit === 'L') fobForCalc = convert.usGalToL(fob);
+    }
 
     storage.set(STORAGE_KEY, {
       tripDistance: distEl.value,
       cruiseAltitude: altEl.value,
-      altUnit: altUnitEl.value,
       altimeter: altimeterEl.value,
-      altimeterUnit: altimeterUnitEl.value,
       rpm: rpmEl.value,
       fuelOnBoard: fobEl.value,
       reserveMinutes: reserveEl.value,
@@ -195,7 +163,7 @@ export function initFuel(panelEl) {
       cruiseAltitude: altFt,
       altimeter: altInHg,
       rpm,
-      fuelOnBoard: fob,
+      fuelOnBoard: fobForCalc,
       reserveMinutes: isNaN(reserve) ? 0 : reserve,
     });
 
@@ -221,26 +189,21 @@ export function initFuel(panelEl) {
 }
 
 function renderResults(el, r) {
-  const sufficientClass = r.sufficient ? '' : 'results-list__value--danger';
   const remainClass = r.remainingL < 0 ? 'results-list__value--danger'
     : r.remainingL < r.reserveFuelL ? 'results-list__value--caution' : '';
 
   let html = `<ul class="results-list">`;
 
-  // Trip summary
   html += resultRow('Trip Distance', `${formatNumber(r.tripDistance)} NM`);
   html += resultRow('Cruise TAS', `${formatNumber(r.tasKt)} KTAS`);
   html += resultRow('Time En Route', formatDuration(r.timeEnRouteMin), true);
 
-  // Fuel flow
   html += separatorRow('Fuel Flow', `${r.flowLph} L/hr (${r.flowGph} GPH)`);
 
-  // Fuel breakdown
   html += resultRow('Trip Fuel', `${r.tripFuelL} L (${r.tripFuelGal} gal)`);
   html += resultRow(`Reserve (${r.reserveMinutes} min)`, `${r.reserveFuelL} L (${r.reserveFuelGal} gal)`);
   html += resultRow('Total Required', `${r.totalRequiredL} L (${r.totalRequiredGal} gal)`, true);
 
-  // Fuel on board
   html += separatorRow('Fuel On Board (total)', `${r.fobL} L (${r.fobGal.toFixed(1)} gal)`);
   if (r.unusableL > 0) {
     html += resultRow('Unusable Fuel', `${r.unusableL} L`);
@@ -252,13 +215,11 @@ function renderResults(el, r) {
   html += resultRow('Endurance After Trip', formatDuration(r.enduranceAfterTripMin), false,
     r.enduranceAfterTripMin < r.reserveMinutes ? 'results-list__value--caution' : '');
 
-  // Total endurance & range
   html += separatorRow('Total Endurance', formatDuration(r.enduranceMin));
   html += resultRow('Total Range', `${formatNumber(r.rangeNm)} NM`);
 
   html += `</ul>`;
 
-  // Alerts
   if (!r.sufficient) {
     const shortL = Math.abs(r.remainingL - r.reserveFuelL);
     html += `<div class="alert alert--error">⚠ Insufficient fuel — short by ${shortL.toFixed(1)} L for ${r.reserveMinutes} min reserve.</div>`;
@@ -300,13 +261,13 @@ function formatDuration(totalMinutes) {
   return `${hrs}h ${String(min).padStart(2, '0')}m`;
 }
 
-function getFuelMax(fuelConfig) {
+function getFuelMax(fuelConfig, fuelUnit) {
   if (!fuelConfig?.capacity) return '';
   const cap = fuelConfig.capacity;
-  const inputUnit = fuelConfig.inputUnit || 'L';
-  if (inputUnit === cap.unit) return cap.value;
-  if (inputUnit === 'us_gal' && cap.valueUSGal) return cap.valueUSGal;
-  if (inputUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
-  if (inputUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
+  if (fuelUnit === cap.unit) return cap.value;
+  if (fuelUnit === 'us_gal' && cap.valueUSGal) return cap.valueUSGal;
+  if (fuelUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
+  if (fuelUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
+  if (fuelUnit === 'L' && cap.valueUSGal) return Math.round(cap.valueUSGal * 3.78541 * 10) / 10;
   return cap.value;
 }

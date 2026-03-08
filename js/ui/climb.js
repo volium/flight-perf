@@ -3,24 +3,14 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { displayUnit, buildRefNote, esc } from './perf-ui-common.js';
+import { getUnits, elevationPlaceholder, altitudePlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'climb_inputs';
 
-const DEFAULTS = {
-  departureElevation: '',
-  elevUnit: 'ft',
-  targetAltitude: '',
-  targetUnit: 'ft',
-  altimeter: '29.92',
-  altimeterUnit: 'inHg',
-  transitionAltitude: '',
-  transitionUnit: 'ft',
-  cruiseClimbSpeed: '',
-};
-
 export function initClimb(panelEl) {
   const profile = getProfile();
-  const saved = { ...DEFAULTS, ...storage.get(STORAGE_KEY, DEFAULTS) };
+  const units = getUnits();
+  const saved = storage.get(STORAGE_KEY, {});
   const climb = profile?.performance?.climb;
 
   if (!climb) {
@@ -31,93 +21,62 @@ export function initClimb(panelEl) {
     return;
   }
 
+  const depElev = saved.departureElevation ?? '';
+  const tgtAlt = saved.targetAltitude ?? '';
+  const alt = saved.altimeter ?? altimeterDefault(units.altimeter);
+  const transAlt = saved.transitionAltitude ?? '';
+  const cruiseSpd = saved.cruiseClimbSpeed ?? '';
+
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
       <div class="panel">
         <h2 class="panel__title">Climb Planner</h2>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="cl-dep-elev">Departure Field Elevation</label>
-            <div class="form-suffix">
-              <input class="form-input" id="cl-dep-elev" type="number" inputmode="numeric"
-                     placeholder="${saved.elevUnit === 'm' ? 'e.g. 365' : 'e.g. 1200'}" value="${esc(saved.departureElevation)}">
-              <span class="form-suffix__label" id="cl-elev-suffix">${saved.elevUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cl-elev-unit">Unit</label>
-            <select class="form-input" id="cl-elev-unit">
-              <option value="ft" ${saved.elevUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.elevUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="cl-dep-elev">Departure Field Elevation</label>
+          <div class="form-suffix">
+            <input class="form-input" id="cl-dep-elev" type="number" inputmode="numeric"
+                   placeholder="${elevationPlaceholder(units.altitude)}" value="${esc(depElev)}">
+            <span class="form-suffix__label">${units.altitude}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="cl-target">Target Altitude</label>
-            <div class="form-suffix">
-              <input class="form-input" id="cl-target" type="number" inputmode="numeric"
-                     placeholder="${saved.targetUnit === 'm' ? 'e.g. 1500' : 'e.g. 5000'}" value="${esc(saved.targetAltitude)}">
-              <span class="form-suffix__label" id="cl-target-suffix">${saved.targetUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cl-target-unit">Unit</label>
-            <select class="form-input" id="cl-target-unit">
-              <option value="ft" ${saved.targetUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.targetUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="cl-target">Target Altitude</label>
+          <div class="form-suffix">
+            <input class="form-input" id="cl-target" type="number" inputmode="numeric"
+                   placeholder="${altitudePlaceholder(units.altitude)}" value="${esc(tgtAlt)}">
+            <span class="form-suffix__label">${units.altitude}</span>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="cl-altimeter">Altimeter Setting</label>
-            <div class="form-suffix">
-              <input class="form-input" id="cl-altimeter" type="number" inputmode="decimal"
-                     step="0.01" placeholder="${saved.altimeterUnit === 'hPa' ? '1013.25' : '29.92'}" value="${esc(saved.altimeter)}">
-              <span class="form-suffix__label" id="cl-alt-suffix">${saved.altimeterUnit}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cl-alt-unit">Unit</label>
-            <select class="form-input" id="cl-alt-unit">
-              <option value="inHg" ${saved.altimeterUnit === 'inHg' ? 'selected' : ''}>inHg</option>
-              <option value="hPa" ${saved.altimeterUnit === 'hPa' ? 'selected' : ''}>hPa</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="cl-altimeter">Altimeter Setting</label>
+          <div class="form-suffix">
+            <input class="form-input" id="cl-altimeter" type="number" inputmode="decimal"
+                   step="0.01" placeholder="${altimeterPlaceholder(units.altimeter)}" value="${esc(alt)}">
+            <span class="form-suffix__label">${units.altimeter}</span>
           </div>
         </div>
 
         <fieldset class="margin-fieldset">
           <legend class="margin-fieldset__legend">Cruise Climb</legend>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="cl-transition">Transition Altitude</label>
-              <div class="form-suffix">
-                <input class="form-input" id="cl-transition" type="number" inputmode="numeric"
-                       placeholder="${saved.transitionUnit === 'm' ? 'e.g. 600' : 'e.g. 2000'}" value="${esc(saved.transitionAltitude)}">
-                <span class="form-suffix__label" id="cl-trans-suffix">${saved.transitionUnit}</span>
-              </div>
-              <div class="form-hint">Switch from Vy to cruise climb at this altitude</div>
+          <div class="form-group">
+            <label class="form-label" for="cl-transition">Transition Altitude</label>
+            <div class="form-suffix">
+              <input class="form-input" id="cl-transition" type="number" inputmode="numeric"
+                     placeholder="${altitudePlaceholder(units.altitude)}" value="${esc(transAlt)}">
+              <span class="form-suffix__label">${units.altitude}</span>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="cl-trans-unit">Unit</label>
-              <select class="form-input" id="cl-trans-unit">
-                <option value="ft" ${saved.transitionUnit === 'ft' ? 'selected' : ''}>ft</option>
-                <option value="m" ${saved.transitionUnit === 'm' ? 'selected' : ''}>m</option>
-              </select>
-            </div>
+            <div class="form-hint">Switch from Vy to cruise climb at this altitude</div>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="cl-cruise-speed">Cruise Climb Speed</label>
             <div class="form-suffix">
               <input class="form-input" id="cl-cruise-speed" type="number" inputmode="numeric"
-                     step="1"
-                     placeholder="e.g. 85" value="${esc(saved.cruiseClimbSpeed)}">
+                     step="1" placeholder="e.g. 85" value="${esc(cruiseSpd)}">
               <span class="form-suffix__label">KIAS</span>
             </div>
             <div class="form-hint">POH Vy: ${profile.speeds?.vy?.value ?? '—'} KIAS</div>
@@ -142,42 +101,15 @@ export function initClimb(panelEl) {
   `;
 
   const depElevEl = panelEl.querySelector('#cl-dep-elev');
-  const elevUnitEl = panelEl.querySelector('#cl-elev-unit');
-  const elevSuffix = panelEl.querySelector('#cl-elev-suffix');
   const targetEl = panelEl.querySelector('#cl-target');
-  const targetUnitEl = panelEl.querySelector('#cl-target-unit');
-  const targetSuffix = panelEl.querySelector('#cl-target-suffix');
   const altimeterEl = panelEl.querySelector('#cl-altimeter');
-  const altUnitEl = panelEl.querySelector('#cl-alt-unit');
-  const altSuffix = panelEl.querySelector('#cl-alt-suffix');
   const transEl = panelEl.querySelector('#cl-transition');
-  const transUnitEl = panelEl.querySelector('#cl-trans-unit');
-  const transSuffix = panelEl.querySelector('#cl-trans-suffix');
   const cruiseSpeedEl = panelEl.querySelector('#cl-cruise-speed');
   const calcBtn = panelEl.querySelector('#cl-calculate');
   const resultsEl = panelEl.querySelector('#cl-results');
 
-  elevUnitEl.addEventListener('change', () => {
-    elevSuffix.textContent = elevUnitEl.value;
-    depElevEl.placeholder = elevUnitEl.value === 'm' ? 'e.g. 365' : 'e.g. 1200';
-  });
-
-  targetUnitEl.addEventListener('change', () => {
-    targetSuffix.textContent = targetUnitEl.value;
-    targetEl.placeholder = targetUnitEl.value === 'm' ? 'e.g. 1500' : 'e.g. 5000';
-  });
-
-  altUnitEl.addEventListener('change', () => {
-    altSuffix.textContent = altUnitEl.value;
-    altimeterEl.placeholder = altUnitEl.value === 'hPa' ? '1013.25' : '29.92';
-  });
-
-  transUnitEl.addEventListener('change', () => {
-    transSuffix.textContent = transUnitEl.value;
-    transEl.placeholder = transUnitEl.value === 'm' ? 'e.g. 600' : 'e.g. 2000';
-  });
-
   function calculate() {
+    const currentUnits = getUnits();
     const depRaw = parseFloat(depElevEl.value);
     const tgtRaw = parseFloat(targetEl.value);
     const altRaw = parseFloat(altimeterEl.value);
@@ -187,28 +119,23 @@ export function initClimb(panelEl) {
       return;
     }
 
-    const depFt = elevUnitEl.value === 'm' ? convert.mToFt(depRaw) : depRaw;
-    const tgtFt = targetUnitEl.value === 'm' ? convert.mToFt(tgtRaw) : tgtRaw;
-    const altInHg = altUnitEl.value === 'hPa' ? convert.hPaToInHg(altRaw) : altRaw;
+    const depFt = currentUnits.altitude === 'm' ? convert.mToFt(depRaw) : depRaw;
+    const tgtFt = currentUnits.altitude === 'm' ? convert.mToFt(tgtRaw) : tgtRaw;
+    const altInHg = currentUnits.altimeter === 'hPa' ? convert.hPaToInHg(altRaw) : altRaw;
 
-    // Cruise climb (optional)
     const transRaw = parseFloat(transEl.value);
     const cruiseSpeed = parseFloat(cruiseSpeedEl.value);
     let transFt = null;
 
     if (!isNaN(transRaw)) {
-      transFt = transUnitEl.value === 'm' ? convert.mToFt(transRaw) : transRaw;
+      transFt = currentUnits.altitude === 'm' ? convert.mToFt(transRaw) : transRaw;
     }
 
     storage.set(STORAGE_KEY, {
       departureElevation: depElevEl.value,
-      elevUnit: elevUnitEl.value,
       targetAltitude: targetEl.value,
-      targetUnit: targetUnitEl.value,
       altimeter: altimeterEl.value,
-      altimeterUnit: altUnitEl.value,
       transitionAltitude: transEl.value,
-      transitionUnit: transUnitEl.value,
       cruiseClimbSpeed: cruiseSpeedEl.value,
     });
 
@@ -248,7 +175,6 @@ function renderResults(el, r) {
 
   let html = `<ul class="results-list">`;
 
-  // Time to climb — primary result
   if (r.timeToClimb != null) {
     html += `
       <li class="results-list__item results-list__item--highlight">
@@ -294,13 +220,12 @@ function renderResults(el, r) {
     </li>
   </ul>`;
 
-if (r.transitionPa != null && r.cruiseClimbFactor < 1) {
-  const pct = Math.round(r.cruiseClimbFactor * 100);
-  const speedNote = r.cruiseClimbSpeed ? ` at ${r.cruiseClimbSpeed} KIAS` : '';
-  html += `<div class="alert alert--info">ℹ Vy climb below ${formatNumber(r.transitionPa)} ft PA, then cruise climb${speedNote} (≈${pct}% of book ROC) above.</div>`;
-}
+  if (r.transitionPa != null && r.cruiseClimbFactor < 1) {
+    const pct = Math.round(r.cruiseClimbFactor * 100);
+    const speedNote = r.cruiseClimbSpeed ? ` at ${r.cruiseClimbSpeed} KIAS` : '';
+    html += `<div class="alert alert--info">ℹ Vy climb below ${formatNumber(r.transitionPa)} ft PA, then cruise climb${speedNote} (≈${pct}% of book ROC) above.</div>`;
+  }
 
-  // Warnings
   if (r.ceilingReached) {
     html += `<div class="alert alert--error">⚠ Service ceiling reached at ${formatNumber(r.ceilingAltitude)} ft PA — rate of climb dropped to zero before reaching target altitude.</div>`;
   }
