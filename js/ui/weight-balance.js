@@ -113,25 +113,12 @@ export function initWeightBalance(panelEl) {
     const stationWeights = {};
     for (const station of nonFuelStations) {
       const el = panelEl.querySelector(`#wb-${station.id}`);
-      let val = parseFloat(el?.value) || 0;
-      // Convert input weight to profile weight unit for the calc engine
-      if (currentUnits.weight !== profileWeightUnit) {
-        val = convertWeight(val, currentUnits.weight, profileWeightUnit);
-      }
-      stationWeights[station.id] = val;
+      stationWeights[station.id] = parseFloat(el?.value) || 0;
     }
 
     const fuelQty = parseFloat(fuelEl.value) || 0;
 
-    // Convert fuel to profile's native fuel unit for the calc engine
-    let fuelForCalc = fuelQty;
-    const profileFuelUnit = fuelConfig?.inputUnit || 'us_gal';
-    if (currentUnits.fuel !== profileFuelUnit) {
-      if (currentUnits.fuel === 'L' && profileFuelUnit === 'us_gal') fuelForCalc = convert.lToUSGal(fuelQty);
-      else if (currentUnits.fuel === 'us_gal' && profileFuelUnit === 'L') fuelForCalc = convert.usGalToL(fuelQty);
-    }
-
-    // Save inputs (in display units — conversion happens on calculate)
+    // Save inputs (in display units)
     const toSave = {};
     for (const station of nonFuelStations) {
       const el = panelEl.querySelector(`#wb-${station.id}`);
@@ -142,7 +129,9 @@ export function initWeightBalance(panelEl) {
 
     const results = calculateWeightBalance(getProfile(), {
       stationWeights,
-      fuelQuantity: fuelForCalc,
+      fuelQuantity: fuelQty,
+      displayWeightUnit: currentUnits.weight,
+      displayFuelUnit: currentUnits.fuel,
     });
 
     if (results.error) {
@@ -150,7 +139,7 @@ export function initWeightBalance(panelEl) {
       return;
     }
 
-    renderResults(resultsEl, results, wb, currentUnits.weight);
+    renderResults(resultsEl, results, wb);
   }
 
   calcBtn.addEventListener('click', calculate);
@@ -167,14 +156,9 @@ export function initWeightBalance(panelEl) {
   }
 }
 
-function renderResults(el, r, wb, displayWeightUnit) {
+function renderResults(el, r, wb) {
   const cgLabel = r.cgReference === 'percent_mac' ? `${r.cgPercent}% MAC` : `${r.cgArm} ${r.armUnit}`;
-  const profileWU = r.weightUnit;
-  const wu = displayWeightUnit;
-
-  const totalDisplay = convertWeight(r.totalWeight, profileWU, wu);
-  const maxDisplay = convertWeight(r.maxWeight, profileWU, wu);
-  const remainDisplay = convertWeight(r.weightRemaining, profileWU, wu);
+  const wu = r.weightUnit;
 
   const weightClass = r.overweight ? 'results-list__value--danger' : '';
   const envelopeOk = r.withinAny;
@@ -194,15 +178,15 @@ function renderResults(el, r, wb, displayWeightUnit) {
   html += `
     <li class="results-list__item results-list__item--highlight">
       <span class="results-list__label">Total Weight</span>
-      <span class="results-list__value ${weightClass}">${formatNumber(totalDisplay, 1)} ${wu}</span>
+      <span class="results-list__value ${weightClass}">${formatNumber(r.totalWeight, 1)} ${wu}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Max Takeoff Weight</span>
-      <span class="results-list__value">${formatNumber(maxDisplay)} ${wu}</span>
+      <span class="results-list__value">${formatNumber(r.maxWeight)} ${wu}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Weight Remaining</span>
-      <span class="results-list__value ${weightClass}">${r.overweight ? '−' : ''}${formatNumber(Math.abs(remainDisplay), 1)} ${wu}</span>
+      <span class="results-list__value ${weightClass}">${r.overweight ? '−' : ''}${formatNumber(Math.abs(r.weightRemaining), 1)} ${wu}</span>
     </li>
     <li class="results-list__item results-list__item--highlight">
       <span class="results-list__label">CG Position</span>
@@ -216,7 +200,7 @@ function renderResults(el, r, wb, displayWeightUnit) {
   html += `</ul>`;
 
   if (r.overweight) {
-    html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(remainDisplay), 1)} ${wu}.</div>`;
+    html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(r.weightRemaining), 1)} ${wu}.</div>`;
   }
 
   if (!r.withinAny) {
@@ -225,16 +209,12 @@ function renderResults(el, r, wb, displayWeightUnit) {
 
   for (const s of r.stations) {
     if (s.overweight) {
-      const sWeightDisplay = convertWeight(s.weight, profileWU, wu);
-      const sMaxDisplay = convertWeight(s.maxWeight, profileWU, wu);
-      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(sWeightDisplay, 1)} / ${formatNumber(sMaxDisplay)} ${wu}).</div>`;
+      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(s.weight, 1)} / ${formatNumber(s.maxWeight)} ${wu}).</div>`;
     }
   }
 
   for (const w of r.constraintWarnings) {
-    const cDisplay = convertWeight(w.combined, w.unit, wu);
-    const mDisplay = convertWeight(w.max, w.unit, wu);
-    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(cDisplay, 1)} / ${formatNumber(mDisplay)} ${wu}).</div>`;
+    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(w.combined, 1)} / ${formatNumber(w.max)} ${wu}).</div>`;
   }
 
   el.innerHTML = html;
@@ -257,6 +237,9 @@ function renderEnvelopeChart(r, wb) {
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
+  const wu = r.weightUnit;
+
+  // Envelope points and totalWeight are already in display units from the calc engine
   let allWeights = [], allCGs = [];
   for (const env of r.envelopePoints) {
     for (const pt of env.points) {
@@ -282,7 +265,7 @@ function renderEnvelopeChart(r, wb) {
   for (let w = Math.ceil(wMin / wStep) * wStep; w <= wMax; w += wStep) {
     const y = scaleY(w);
     svg += `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="#e2e8f0" stroke-width="0.5"/>`;
-    svg += `<text x="${pad.left - 6}" y="${y}" text-anchor="end" dominant-baseline="middle" class="wb-chart__label">${w}</text>`;
+    svg += `<text x="${pad.left - 6}" y="${y}" text-anchor="end" dominant-baseline="middle" class="wb-chart__label">${Math.round(w)}</text>`;
   }
   const cgStep = niceStep(cgMax - cgMin, 5);
   for (let c = Math.ceil(cgMin / cgStep) * cgStep; c <= cgMax; c += cgStep) {
@@ -294,7 +277,7 @@ function renderEnvelopeChart(r, wb) {
 
   const cgAxisLabel = r.cgReference === 'percent_mac' ? 'CG (% MAC)' : `CG (${r.armUnit})`;
   svg += `<text x="${pad.left + plotW / 2}" y="${H - 4}" text-anchor="middle" class="wb-chart__axis-label">${cgAxisLabel}</text>`;
-  svg += `<text x="14" y="${pad.top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" class="wb-chart__axis-label" transform="rotate(-90, 14, ${pad.top + plotH / 2})">Weight (${r.weightUnit})</text>`;
+  svg += `<text x="14" y="${pad.top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" class="wb-chart__axis-label" transform="rotate(-90, 14, ${pad.top + plotH / 2})">Weight (${wu})</text>`;
 
   for (const env of r.envelopePoints) {
     const polyPoints = env.points
@@ -309,7 +292,7 @@ function renderEnvelopeChart(r, wb) {
   const ptColor = r.withinAny ? '#22c55e' : '#ef4444';
 
   svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
-  svg += `<text x="${px.toFixed(1)}" y="${(py - 10).toFixed(1)}" text-anchor="middle" class="wb-chart__point-label" fill="${ptColor}">${formatNumber(r.totalWeight, 1)} ${r.weightUnit}</text>`;
+  svg += `<text x="${px.toFixed(1)}" y="${(py - 10).toFixed(1)}" text-anchor="middle" class="wb-chart__point-label" fill="${ptColor}">${formatNumber(r.totalWeight, 1)} ${wu}</text>`;
 
   svg += `<rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}" fill="none" stroke="#94a3b8" stroke-width="0.5"/>`;
 
