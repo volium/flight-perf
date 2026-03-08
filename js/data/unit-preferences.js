@@ -77,7 +77,8 @@ export function convertValue(value, fromUnit, toUnit, type) {
       if (fromUnit === 'us_gal' && toUnit === 'L') converted = convert.usGalToL(num);
       else if (fromUnit === 'L' && toUnit === 'us_gal') converted = convert.lToUSGal(num);
       else return value;
-      return String(Math.round(converted * 10) / 10);
+      if (toUnit === 'L') return String(Math.round(converted));
+      return String(Math.round(converted * 2) / 2);
 
     default:
       return value;
