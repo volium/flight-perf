@@ -15,19 +15,24 @@ const DEFAULTS = {
 export function initCrosswind(panelEl) {
   const saved = storage.get(STORAGE_KEY, DEFAULTS);
 
+  // Build runway pair options (01/19 through 18/36)
+  let rwyOptions = '<option value="">Select runway…</option>';
+  for (let i = 1; i <= 18; i++) {
+    const hi = i + 18;
+    const label = `${String(i).padStart(2, '0')}/${String(hi).padStart(2, '0')}`;
+    const val = i * 10;
+    const selected = saved.runwayHeading === String(val) ? ' selected' : '';
+    rwyOptions += `<option value="${val}"${selected}>${label}</option>`;
+  }
+
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
       <div class="panel">
         <h2 class="panel__title">Crosswind Component</h2>
 
         <div class="form-group">
-          <label class="form-label" for="xw-runway">Runway Heading</label>
-          <div class="form-suffix">
-            <input class="form-input" id="xw-runway" type="number" inputmode="numeric"
-                   min="1" max="360" placeholder="e.g. 270" value="${esc(saved.runwayHeading)}">
-            <span class="form-suffix__label">°</span>
-          </div>
-          <div class="runway-shortcuts" id="xw-runway-shortcuts"></div>
+          <label class="form-label" for="xw-runway">Runway</label>
+          <select class="form-input" id="xw-runway">${rwyOptions}</select>
         </div>
 
         <div class="form-group">
@@ -78,9 +83,6 @@ export function initCrosswind(panelEl) {
   const gust = panelEl.querySelector('#xw-gust');
   const calcBtn = panelEl.querySelector('#xw-calculate');
   const resultsEl = panelEl.querySelector('#xw-results');
-  const shortcutsEl = panelEl.querySelector('#xw-runway-shortcuts');
-
-  buildRunwayShortcuts(shortcutsEl, runway);
 
   function calculate() {
     const rwyVal = parseFloat(runway.value);
@@ -89,7 +91,7 @@ export function initCrosswind(panelEl) {
 
     if (isNaN(rwyVal) || isNaN(dirVal) || isNaN(spdVal)) {
       resultsEl.innerHTML = `
-        <div class="alert alert--warning">⚠ Please enter runway heading, wind direction, and wind speed.</div>
+        <div class="alert alert--warning">⚠ Please select a runway and enter wind direction and speed.</div>
       `;
       return;
     }
@@ -123,36 +125,6 @@ export function initCrosswind(panelEl) {
   panelEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('input')) {
       calculate();
-    }
-  });
-}
-
-function buildRunwayShortcuts(containerEl, inputEl) {
-  const common = [
-    [9, 27], [18, 36], [4, 22], [10, 28], [13, 31],
-  ];
-
-  const html = common
-    .map(
-      ([a, b]) =>
-        `<button type="button" class="runway-btn" data-hdg-a="${a * 10}" data-hdg-b="${b * 10}">${String(a).padStart(2, '0')}/${String(b).padStart(2, '0')}</button>`,
-    )
-    .join('');
-
-  containerEl.innerHTML = html;
-
-  containerEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('.runway-btn');
-    if (!btn) return;
-
-    const existing = parseFloat(inputEl.value);
-    const hdgA = parseInt(btn.dataset.hdgA, 10);
-    const hdgB = parseInt(btn.dataset.hdgB, 10);
-
-    if (existing === hdgA) {
-      inputEl.value = hdgB;
-    } else {
-      inputEl.value = hdgA;
     }
   });
 }
@@ -472,9 +444,11 @@ function renderResults(el, r) {
   let html = renderDiagram(r);
 
   // ── Side-by-side runway columns ──
+  const selPreferred = s.headwind > recip.headwind;
+  const recipPreferred = recip.headwind > s.headwind;
   html += '<div class="xw-columns">';
-  html += renderRunwayColumn(rwyLabel, s, g, r.crosswindStatus);
-  html += renderRunwayColumn(recipLabel, recip, gRecip, r.crosswindStatus);
+  html += renderRunwayColumn(rwyLabel, s, g, r.crosswindStatus, selPreferred);
+  html += renderRunwayColumn(recipLabel, recip, gRecip, r.crosswindStatus, recipPreferred);
   html += '</div>';
 
   // ── Shared info ──
@@ -492,21 +466,18 @@ function renderResults(el, r) {
     html += `<div class="alert alert--warning">⚠ Crosswind approaching max demonstrated limit (${r.maxCrosswind} kt).</div>`;
   }
 
-  if (s.isTailwind) {
-    html += `<div class="alert alert--warning">⚠ Tailwind on Rwy ${rwyLabel} — consider Rwy ${recipLabel}.</div>`;
-  }
-
   el.innerHTML = html;
 }
 
-function renderRunwayColumn(label, steady, gust, xwStatus) {
+function renderRunwayColumn(label, steady, gust, xwStatus, preferred) {
   const windLabel = steady.isHeadwind ? 'Headwind' : 'Tailwind';
   const windValue = steady.isHeadwind ? steady.headwind : steady.tailwind;
   const windIcon = steady.isHeadwind ? '↓' : '↑';
   const xwDir = fmtXwDir(steady.crosswindDirection);
   const xwClass = xwStatusClass(xwStatus);
+  const prefClass = preferred ? ' xw-col--preferred' : '';
 
-  let html = `<div class="xw-col">
+  let html = `<div class="xw-col${prefClass}">
     <h3 class="xw-col__title">Rwy ${label}</h3>
     <div class="xw-col__row">
       <span class="xw-col__label">${windIcon} ${windLabel}</span>

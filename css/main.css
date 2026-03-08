@@ -455,6 +455,10 @@ select.form-input {
   border-bottom: 1px solid var(--color-border);
 }
 
+.xw-col--preferred .xw-col__title {
+  color: var(--color-success);
+}
+
 .xw-col__row {
   display: flex;
   justify-content: space-between;
