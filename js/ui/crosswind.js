@@ -322,8 +322,9 @@ function renderDiagram(r) {
   );
 
   // Centerline dashes — compute dasharray so full stripes fit between numbers
-  const clStart = cy - rwyHalf + 28;
-  const clEnd = cy + rwyHalf - 28;
+  const rwyNumInset = 27;
+  const clStart = cy - rwyHalf + rwyNumInset + 8;
+  const clEnd = cy + rwyHalf - rwyNumInset - 8;
   const clLen = clEnd - clStart;
   const targetDash = 7;
   const numDashes = Math.round(clLen / (targetDash * 2));
