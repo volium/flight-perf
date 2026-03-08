@@ -8,7 +8,6 @@ const STORAGE_KEY = 'crosswind_inputs';
 const DEFAULTS = {
   windDirection: '',
   windSpeed: '',
-  windSpeedUnit: 'kt',
   gustSpeed: '',
   runwayHeading: '',
 };
@@ -40,21 +39,12 @@ export function initCrosswind(panelEl) {
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="xw-wind-speed">Wind Speed</label>
-            <div class="form-suffix">
-              <input class="form-input" id="xw-wind-speed" type="number" inputmode="numeric"
-                     min="0" placeholder="e.g. 15" value="${esc(saved.windSpeed)}">
-              <span class="form-suffix__label" id="xw-speed-suffix">${saved.windSpeedUnit === 'kmh' ? 'km/h' : 'kt'}</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="xw-speed-unit">Unit</label>
-            <select class="form-input" id="xw-speed-unit">
-              <option value="kt" ${saved.windSpeedUnit === 'kt' ? 'selected' : ''}>kt</option>
-              <option value="kmh" ${saved.windSpeedUnit === 'kmh' ? 'selected' : ''}>km/h</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label" for="xw-wind-speed">Wind Speed</label>
+          <div class="form-suffix">
+            <input class="form-input" id="xw-wind-speed" type="number" inputmode="numeric"
+                   min="0" placeholder="e.g. 15" value="${esc(saved.windSpeed)}">
+            <span class="form-suffix__label">kt</span>
           </div>
         </div>
 
@@ -63,7 +53,7 @@ export function initCrosswind(panelEl) {
           <div class="form-suffix">
             <input class="form-input" id="xw-gust" type="number" inputmode="numeric"
                    min="0" placeholder="—" value="${esc(saved.gustSpeed)}">
-            <span class="form-suffix__label" id="xw-gust-suffix">${saved.windSpeedUnit === 'kmh' ? 'km/h' : 'kt'}</span>
+            <span class="form-suffix__label">kt</span>
           </div>
         </div>
 
@@ -85,21 +75,12 @@ export function initCrosswind(panelEl) {
   const runway = panelEl.querySelector('#xw-runway');
   const windDir = panelEl.querySelector('#xw-wind-dir');
   const windSpeed = panelEl.querySelector('#xw-wind-speed');
-  const speedUnit = panelEl.querySelector('#xw-speed-unit');
-  const speedSuffix = panelEl.querySelector('#xw-speed-suffix');
   const gust = panelEl.querySelector('#xw-gust');
-  const gustSuffix = panelEl.querySelector('#xw-gust-suffix');
   const calcBtn = panelEl.querySelector('#xw-calculate');
   const resultsEl = panelEl.querySelector('#xw-results');
   const shortcutsEl = panelEl.querySelector('#xw-runway-shortcuts');
 
   buildRunwayShortcuts(shortcutsEl, runway);
-
-  speedUnit.addEventListener('change', () => {
-    const label = speedUnit.value === 'kmh' ? 'km/h' : 'kt';
-    speedSuffix.textContent = label;
-    gustSuffix.textContent = label;
-  });
 
   function calculate() {
     const rwyVal = parseFloat(runway.value);
@@ -118,7 +99,6 @@ export function initCrosswind(panelEl) {
     storage.set(STORAGE_KEY, {
       windDirection: windDir.value,
       windSpeed: windSpeed.value,
-      windSpeedUnit: speedUnit.value,
       gustSpeed: gust.value,
       runwayHeading: runway.value,
     });
@@ -129,7 +109,7 @@ export function initCrosswind(panelEl) {
     const results = calculateCrosswind({
       windDirection: dirVal,
       windSpeed: spdVal,
-      windSpeedUnit: speedUnit.value,
+      windSpeedUnit: 'kt',
       runwayHeading: rwyVal,
       gustSpeed: isNaN(gustVal) ? null : gustVal,
       maxCrosswind: maxXw,
