@@ -75,12 +75,14 @@ export function calculateClimbPlan(profile, inputs) {
     return { error: 'Target altitude must be higher than departure altitude.' };
   }
 
-  // ROC at departure and target
+  const extrapolateOpts = { extrapolate: true };
+
+  // ROC at departure and target (extrapolate beyond table range)
   const rocDep = interpolateFromTable(
-    climb.data, 'pressureAltitude', 'rateOfClimb', departurePa,
+    climb.data, 'pressureAltitude', 'rateOfClimb', departurePa, null, extrapolateOpts,
   );
   const rocTgt = interpolateFromTable(
-    climb.data, 'pressureAltitude', 'rateOfClimb', targetPa,
+    climb.data, 'pressureAltitude', 'rateOfClimb', targetPa, null, extrapolateOpts,
   );
 
   // Best climb speed at departure (representative Vy)
@@ -88,8 +90,7 @@ export function calculateClimbPlan(profile, inputs) {
     climb.data, 'pressureAltitude', 'bestClimbSpeed', departurePa,
   );
 
-  const clamped = rocDep.clamped || rocTgt.clamped;
-  const clampedTo = rocDep.clamped ? rocDep.clampedTo : rocTgt.clamped ? rocTgt.clampedTo : null;
+  const extrapolated = rocDep.extrapolated || rocTgt.extrapolated;
 
   // Numerical integration: step through altitude in 100 ft increments
   const STEP = 100;
@@ -105,7 +106,7 @@ export function calculateClimbPlan(profile, inputs) {
     const dAlt = stepTop - stepBottom;
 
     const rocMid = interpolateFromTable(
-      climb.data, 'pressureAltitude', 'rateOfClimb', midAlt,
+      climb.data, 'pressureAltitude', 'rateOfClimb', midAlt, null, extrapolateOpts,
     );
 
     if (rocMid.value <= 0) {
@@ -124,12 +125,11 @@ export function calculateClimbPlan(profile, inputs) {
     targetPa: Math.round(targetPa),
     altitudeToClimb: Math.round(altitudeToClimb),
     rocAtDeparture: Math.round(rocDep.value),
-    rocAtTarget: Math.round(rocTgt.value),
+    rocAtTarget: ceilingReached ? 0 : Math.round(rocTgt.value),
     averageRoc,
     timeToClimb: ceilingReached ? null : Math.round(totalMinutes * 10) / 10,
     bestClimbSpeed: Math.round(bcs.value),
-    clamped,
-    clampedTo,
+    extrapolated,
     ceilingReached,
     ceilingAltitude,
     referenceConditions: climb.referenceConditions,

@@ -239,8 +239,8 @@ function renderResults(el, r) {
     html += `<div class="alert alert--error">⚠ Service ceiling reached at ${formatNumber(r.ceilingAltitude)} ft PA — rate of climb dropped to zero before reaching target altitude.</div>`;
   }
 
-  if (r.clamped) {
-    html += `<div class="alert alert--warning">⚠ Altitude is outside POH data range — result clamped to ${r.clampedTo === 'min' ? 'minimum' : 'maximum'} table value.</div>`;
+  if (r.extrapolated) {
+    html += `<div class="alert alert--warning">⚠ Altitude is outside POH data range — results are extrapolated beyond known performance data. Use with caution.</div>`;
   }
 
   const minRoc = Math.min(r.rocAtDeparture, r.rocAtTarget);
