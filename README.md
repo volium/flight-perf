@@ -2,18 +2,35 @@
 
 **Flight Performance Calculator** — A modern, lightweight, offline-first web application for small aircraft performance calculations.
 
+**Live app:** [volium.github.io/flight-perf](https://volium.github.io/flight-perf/)
+
 ---
 
 ## Overview
 
 `flight-perf` computes takeoff distance, landing distance, climb performance, cruise performance, weight & balance, density altitude, crosswind components, and fuel planning for general aviation aircraft.
 
+### Calculators
+
+| Calculator | Description |
+|-----------|-------------|
+| **Takeoff** | Ground roll & obstacle clearance distance with safety margins |
+| **Landing** | Ground roll & obstacle clearance distance with safety margins |
+| **Climb** | Time to climb, ROC interpolation, cruise climb transition |
+| **Cruise** | TAS/IAS from altitude × RPM, density-corrected fuel flow, endurance, range |
+| **W&B** | Station weights, CG in %MAC or arm, envelope chart (SVG) |
+| **Density Alt** | Pressure altitude, density altitude, ISA deviation |
+| **Crosswind** | Head/tail/crosswind components with SVG diagram, dual runway display |
+| **Fuel** | Trip fuel, reserves, usable fuel, endurance, range |
+
 ### Key Features
 
 - **100% Offline** — Works without internet after initial load (PWA with Service Worker).
-- **Aircraft Profiles** — Extensible JSON-based profiles supporting tables, graph data, formulas, and correction factors.
+- **Aircraft Profiles** — Extensible JSON-based profiles supporting reference tables, interpolation tables, and formulas.
+- **Safety Margins** — Configurable percentage or fixed distance margins with round-up option.
 - **Responsive** — Designed for desktop monitors, tablets, and phones.
-- **Zero Dependencies** — Pure HTML, CSS, and JavaScript. No frameworks, no build required.
+- **Dark Mode** — Automatic (follows system) or manual toggle.
+- **Zero Dependencies** — Pure HTML, CSS, and JavaScript. No frameworks, no build step.
 - **GitHub Pages** — Static hosting, no backend.
 
 ## Documentation
@@ -23,8 +40,7 @@
 ## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/flight-perf.git
+git clone https://github.com/volium/flight-perf.git
 cd flight-perf
 ```
 
@@ -76,15 +92,23 @@ If you use VS Code, install the [Live Server](https://marketplace.visualstudio.c
 
 ## Project Status
 
-🟡 **Planning** — See [PLAN.md](PLAN.md) for the full roadmap.
+🟢 **Phase 1 Complete** — All 8 calculators implemented with the Sling LSA (N246LT) profile. See [PLAN.md](PLAN.md) for the full roadmap.
 
 ## Aircraft Profiles
 
 Profiles are JSON files stored in `/profiles/`. See the [Profile JSON Schema](PLAN.md#4-aircraft-profile-system) in the plan document for the full specification.
 
+The bundled profile is for a **Sling LSA (N246LT)** — a Sling Aircraft light-sport airplane with a Rotax 912 iS engine.
+
 To add a new aircraft:
 1. Create a JSON file following the schema in `PLAN.md`.
-2. Place it in the `profiles/` directory (for bundled profiles) or import it via the app's file picker.
+2. Place it in the `profiles/` directory.
+
+## Technology
+
+- **Zero production dependencies** — pure HTML5, CSS3 (custom properties), and vanilla JavaScript (ES Modules).
+- **PWA** — Service Worker caches all assets for offline use; installable on mobile and desktop.
+- **No build step** — serve the files directly from any HTTP server.
 
 ## License
 
