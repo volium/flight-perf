@@ -51,7 +51,7 @@ export function convertValue(value, fromUnit, toUnit, type) {
       if (fromUnit === 'ft' && toUnit === 'm') converted = convert.ftToM(num);
       else if (fromUnit === 'm' && toUnit === 'ft') converted = convert.mToFt(num);
       else return value;
-      return String(Math.round(converted));
+      return String(smartRound(converted, toUnit));
 
     case 'altimeter':
       if (fromUnit === 'inHg' && toUnit === 'hPa') converted = convert.inHgToHPa(num);
@@ -82,6 +82,30 @@ export function convertValue(value, fromUnit, toUnit, type) {
     default:
       return value;
   }
+}
+
+/**
+ * Smart rounding for altitude/distance conversions.
+ * Rounds to an increment based on magnitude and target unit
+ * to produce "pilot-friendly" numbers.
+ */
+function smartRound(value, unit) {
+  const abs = Math.abs(value);
+  let increment;
+
+  if (unit === 'm') {
+    if (abs < 100) increment = 5;
+    else if (abs < 500) increment = 10;
+    else if (abs < 2000) increment = 25;
+    else increment = 50;
+  } else {
+    // ft
+    if (abs < 500) increment = 10;
+    else if (abs < 2000) increment = 50;
+    else increment = 100;
+  }
+
+  return Math.round(value / increment) * increment;
 }
 
 /**
