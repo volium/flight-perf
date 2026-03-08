@@ -102,6 +102,10 @@ export function initWeightBalance(panelEl) {
     if (!isNaN(val) && val > maxFuelDisplay) {
       fuelEl.value = maxFuelDisplay;
     }
+    // Save clamped value immediately so unit conversion uses the correct value
+    const saved = storage.get(STORAGE_KEY, {});
+    saved._fuel = fuelEl.value;
+    storage.set(STORAGE_KEY, saved);
   });
 
   function calculate() {
