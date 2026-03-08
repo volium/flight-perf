@@ -17,6 +17,10 @@
     padding: var(--space-md);
     border-radius: var(--border-radius);
   }
+
+  .custom-margins__fields {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ── Responsive: Tablet (768px+) ── */

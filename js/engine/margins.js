@@ -81,28 +81,16 @@ export const MARGIN_PRESETS = {
       totalOverObstacle: {},
     },
   },
-  conservative: {
-    id: 'conservative',
-    name: 'Conservative (+25%, ↑100)',
+  custom: {
+    id: 'custom',
+    name: 'Custom',
     takeoff: {
-      groundRoll:        { percentage: 25, roundUp: 100 },
-      totalOverObstacle: { percentage: 25, roundUp: 100 },
+      groundRoll:        {},
+      totalOverObstacle: {},
     },
     landing: {
-      groundRoll:        { percentage: 40, roundUp: 100 },
-      totalOverObstacle: { percentage: 40, roundUp: 100 },
-    },
-  },
-  faa_ac91: {
-    id: 'faa_ac91',
-    name: 'FAA AC 91-13C',
-    takeoff: {
-      groundRoll:        { factor: 1.43, roundUp: 100 },
-      totalOverObstacle: { factor: 1.43, roundUp: 100 },
-    },
-    landing: {
-      groundRoll:        { factor: 1.67, roundUp: 100 },
-      totalOverObstacle: { factor: 1.67, roundUp: 100 },
+      groundRoll:        {},
+      totalOverObstacle: {},
     },
   },
 };

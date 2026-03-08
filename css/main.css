@@ -514,6 +514,49 @@ select.form-input {
   color: var(--color-text-label);
 }
 
+/* ── Custom Margin Fields ── */
+.custom-margins {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-tab);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
+
+.custom-margins__section {
+  margin-bottom: var(--space-sm);
+}
+
+.custom-margins__section:last-child {
+  margin-bottom: 0;
+}
+
+.custom-margins__label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-bottom: var(--space-xs);
+}
+
+.custom-margins__fields {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xs);
+}
+
+.custom-margins__field-label {
+  display: block;
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1px;
+}
+
+.form-input--sm {
+  padding: var(--space-xs);
+  font-size: var(--font-size-xs);
+}
+
 /* ── Crosswind Diagram ── */
 .xw-diagram {
   display: flex;

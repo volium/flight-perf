@@ -5,11 +5,17 @@ import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 
 const STORAGE_KEY = 'takeoff_inputs';
+const CUSTOM_MARGIN_KEY = 'takeoff_custom_margins';
 
 const DEFAULTS = {
   surface: '',
   marginPreset: 'none',
   distanceUnit: 'ft',
+};
+
+const CUSTOM_MARGIN_DEFAULTS = {
+  groundRoll:        { factor: '', percentage: '', fixed: '', roundUp: '' },
+  totalOverObstacle: { factor: '', percentage: '', fixed: '', roundUp: '' },
 };
 
 export function initTakeoff(panelEl) {
@@ -66,6 +72,9 @@ export function initTakeoff(panelEl) {
           </div>
         </div>
 
+        <div id="to-margin-info"></div>
+        <div id="to-custom-margins"></div>
+
         <button class="btn btn-primary btn-block" id="to-calculate">Calculate</button>
 
         ${refNote}
@@ -88,6 +97,33 @@ export function initTakeoff(panelEl) {
   const unitEl = panelEl.querySelector('#to-unit');
   const calcBtn = panelEl.querySelector('#to-calculate');
   const resultsEl = panelEl.querySelector('#to-results');
+  const marginInfoEl = panelEl.querySelector('#to-margin-info');
+  const customEl = panelEl.querySelector('#to-custom-margins');
+
+  function updateMarginInfo() {
+    const presetId = marginEl.value;
+
+    if (presetId === 'custom') {
+      marginInfoEl.innerHTML = '';
+      renderCustomMarginFields(customEl);
+    } else {
+      customEl.innerHTML = '';
+      marginInfoEl.innerHTML = '';
+    }
+  }
+
+  marginEl.addEventListener('change', updateMarginInfo);
+  updateMarginInfo();
+
+  function getActiveMargins() {
+    const presetId = marginEl.value;
+
+    if (presetId === 'custom') {
+      return readCustomMarginFields(customEl);
+    }
+
+    return getMarginPreset(presetId).takeoff;
+  }
 
   function calculate() {
     const surface = surfaceEl.value;
@@ -101,11 +137,15 @@ export function initTakeoff(panelEl) {
 
     storage.set(STORAGE_KEY, { surface, marginPreset: presetId, distanceUnit });
 
-    const preset = getMarginPreset(presetId);
+    if (presetId === 'custom') {
+      saveCustomMargins(customEl);
+    }
+
+    const margins = getActiveMargins();
 
     const results = calculateTakeoff(profile, {
       surface,
-      margins: preset.takeoff,
+      margins,
       distanceUnit,
     });
 
@@ -119,11 +159,96 @@ export function initTakeoff(panelEl) {
 
   calcBtn.addEventListener('click', calculate);
 
-  // Auto-calculate if saved values exist
   if (saved.surface) {
     calculate();
   }
 }
+
+/* ── Custom Margin Fields ── */
+
+function renderCustomMarginFields(containerEl) {
+  const saved = storage.get(CUSTOM_MARGIN_KEY, CUSTOM_MARGIN_DEFAULTS);
+
+  containerEl.innerHTML = `
+    <div class="custom-margins">
+      <div class="custom-margins__section">
+        <span class="custom-margins__label">Ground Roll</span>
+        <div class="custom-margins__fields">
+          ${marginField('to-cm-gr-factor', 'Factor', saved.groundRoll.factor, 'e.g. 1.43')}
+          ${marginField('to-cm-gr-pct', '%', saved.groundRoll.percentage, 'e.g. 25')}
+          ${marginField('to-cm-gr-fixed', 'Fixed', saved.groundRoll.fixed, 'e.g. 500')}
+          ${marginField('to-cm-gr-round', 'Round ↑', saved.groundRoll.roundUp, 'e.g. 100')}
+        </div>
+      </div>
+      <div class="custom-margins__section">
+        <span class="custom-margins__label">Over Obstacle</span>
+        <div class="custom-margins__fields">
+          ${marginField('to-cm-to-factor', 'Factor', saved.totalOverObstacle.factor, 'e.g. 1.43')}
+          ${marginField('to-cm-to-pct', '%', saved.totalOverObstacle.percentage, 'e.g. 25')}
+          ${marginField('to-cm-to-fixed', 'Fixed', saved.totalOverObstacle.fixed, 'e.g. 500')}
+          ${marginField('to-cm-to-round', 'Round ↑', saved.totalOverObstacle.roundUp, 'e.g. 100')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function marginField(id, label, value, placeholder) {
+  const v = value != null && value !== '' ? value : '';
+  return `
+    <div class="custom-margins__field">
+      <label class="custom-margins__field-label" for="${id}">${label}</label>
+      <input class="form-input form-input--sm" id="${id}" type="number" inputmode="decimal"
+             step="any" placeholder="${placeholder}" value="${v}">
+    </div>`;
+}
+
+function readCustomMarginFields(containerEl) {
+  function readVal(id) {
+    const el = containerEl.querySelector(`#${id}`);
+    if (!el || el.value === '') return undefined;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? undefined : n;
+  }
+
+  return {
+    groundRoll: {
+      factor:     readVal('to-cm-gr-factor') ?? null,
+      percentage: readVal('to-cm-gr-pct') ?? null,
+      fixed:      readVal('to-cm-gr-fixed') ?? null,
+      roundUp:    readVal('to-cm-gr-round') ?? null,
+    },
+    totalOverObstacle: {
+      factor:     readVal('to-cm-to-factor') ?? null,
+      percentage: readVal('to-cm-to-pct') ?? null,
+      fixed:      readVal('to-cm-to-fixed') ?? null,
+      roundUp:    readVal('to-cm-to-round') ?? null,
+    },
+  };
+}
+
+function saveCustomMargins(containerEl) {
+  function readRaw(id) {
+    const el = containerEl.querySelector(`#${id}`);
+    return el ? el.value : '';
+  }
+
+  storage.set(CUSTOM_MARGIN_KEY, {
+    groundRoll: {
+      factor:     readRaw('to-cm-gr-factor'),
+      percentage: readRaw('to-cm-gr-pct'),
+      fixed:      readRaw('to-cm-gr-fixed'),
+      roundUp:    readRaw('to-cm-gr-round'),
+    },
+    totalOverObstacle: {
+      factor:     readRaw('to-cm-to-factor'),
+      percentage: readRaw('to-cm-to-pct'),
+      fixed:      readRaw('to-cm-to-fixed'),
+      roundUp:    readRaw('to-cm-to-round'),
+    },
+  });
+}
+
+/* ── Results Rendering ── */
 
 function renderResults(el, r, presetId) {
   const gr = r.groundRoll;
@@ -131,19 +256,16 @@ function renderResults(el, r, presetId) {
   const unit = r.distanceUnit;
 
   let html = `<ul class="results-list">`;
-
   html += renderDistanceRow('Ground Roll', gr, unit);
   html += renderDistanceRow(`Total ${r.obstacleLabel}`, to, unit, true);
-
   html += `</ul>`;
 
-  // Margin info
   if (gr.marginApplied || to.marginApplied) {
     const preset = getMarginPreset(presetId);
-    html += `<div class="alert alert--info">ℹ Safety margin applied: ${preset.name}</div>`;
+    const name = presetId === 'custom' ? 'Custom' : preset.name;
+    html += `<div class="alert alert--info">ℹ Safety margin applied: ${name}</div>`;
   }
 
-  // Reference conditions note
   if (r.referenceConditions) {
     const cond = r.referenceConditions;
     const parts = [];
