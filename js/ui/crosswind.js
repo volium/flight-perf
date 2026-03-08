@@ -64,7 +64,7 @@ export function initCrosswind(panelEl) {
         <h2 class="panel__title">Results</h2>
         <div id="xw-results">
           <div class="placeholder-message">
-            <div class="placeholder-message__icon">💨</div>
+            <div class="placeholder-message__icon">🧭</div>
             <div class="placeholder-message__text">Enter values and press Calculate</div>
           </div>
         </div>
