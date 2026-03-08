@@ -427,6 +427,12 @@ select.form-input {
   font-size: var(--font-size-xs);
 }
 
+.form-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
 /* ── Results List Separator ── */
 .results-list__item--separator {
   margin-top: var(--space-sm);
