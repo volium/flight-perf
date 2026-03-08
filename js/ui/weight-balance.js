@@ -241,8 +241,8 @@ function convertWeight(value, fromUnit, toUnit) {
 /* ── SVG Envelope Chart ── */
 
 function renderEnvelopeChart(r, wb) {
-  const W = 400, H = 280;
-  const pad = { top: 20, right: 30, bottom: 40, left: 55 };
+  const W = 400, H = 300;
+  const pad = { top: 30, right: 30, bottom: 40, left: 55 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
@@ -300,20 +300,15 @@ function renderEnvelopeChart(r, wb) {
   const py = scaleY(r.totalWeight);
   const ptColor = r.withinAny ? '#22c55e' : '#ef4444';
 
-  svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
-
-  // Position label: above the point by default, below if near top edge
-  const labelGap = 12;
-  const labelAbove = py - pad.top > 25;
-  const ly = labelAbove ? py - labelGap : py + labelGap + 10;
-
-  // Horizontal anchor: shift if near left/right edges
-  const leftSpace = px - pad.left;
-  const rightSpace = (pad.left + plotW) - px;
-  const anchor = leftSpace < 40 ? 'start' : rightSpace < 40 ? 'end' : 'middle';
-
+  // Place label as callout in top margin, with a connector line to the point
   const labelText = `${formatNumber(r.totalWeight, 1)} ${wu}`;
-  svg += `<text x="${px.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" class="wb-chart__point-label" fill="${ptColor}">${labelText}</text>`;
+  const labelY = 20;
+  const labelX = Math.max(pad.left + 10, Math.min(px, W - pad.right - 10));
+  const anchor = labelX <= pad.left + 15 ? 'start' : labelX >= W - pad.right - 15 ? 'end' : 'middle';
+
+  svg += `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${labelX.toFixed(1)}" y2="${(labelY + 4).toFixed(1)}" stroke="${ptColor}" stroke-width="0.75" stroke-dasharray="3,2"/>`;
+  svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
+  svg += `<text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" class="wb-chart__point-label" fill="${ptColor}">${labelText}</text>`;
 
   svg += `<rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}" fill="none" stroke="#94a3b8" stroke-width="0.5"/>`;
 
