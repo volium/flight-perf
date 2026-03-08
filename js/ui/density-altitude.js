@@ -2,7 +2,7 @@ import { calculateDensityAltitude } from '../calc/density-altitude.js';
 import { formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { esc } from './perf-ui-common.js';
-import { getUnits, elevationPlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
+import { getUnits, elevationPlaceholder, altimeterPlaceholder, altimeterDefault, displayAltitude } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'density_inputs';
 
@@ -109,6 +109,9 @@ export function initDensityAltitude(panelEl) {
 }
 
 function renderResults(el, r) {
+  const pa = displayAltitude(r.pressureAltitude);
+  const da = displayAltitude(r.densityAltitude);
+
   const daClass =
     r.densityAltitude > 7000
       ? 'results-list__value--danger'
@@ -122,11 +125,11 @@ function renderResults(el, r) {
     <ul class="results-list">
       <li class="results-list__item">
         <span class="results-list__label">Pressure Altitude</span>
-        <span class="results-list__value">${formatNumber(r.pressureAltitude)} ft</span>
+        <span class="results-list__value">${formatNumber(pa.value)} ${pa.unit}</span>
       </li>
       <li class="results-list__item results-list__item--highlight">
         <span class="results-list__label">Density Altitude</span>
-        <span class="results-list__value ${daClass}">${formatNumber(r.densityAltitude)} ft</span>
+        <span class="results-list__value ${daClass}">${formatNumber(da.value)} ${da.unit}</span>
       </li>
       <li class="results-list__item">
         <span class="results-list__label">ISA Temp at Altitude</span>

@@ -3,7 +3,7 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { esc } from './perf-ui-common.js';
-import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, fuelUnitLabel } from '../data/unit-preferences.js';
+import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, fuelUnitLabel, displayFuel } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'fuel_inputs';
 
@@ -200,17 +200,17 @@ function renderResults(el, r) {
 
   html += separatorRow('Fuel Flow', `${r.flowLph} L/hr (${r.flowGph} GPH)`);
 
-  html += resultRow('Trip Fuel', `${r.tripFuelL} L (${r.tripFuelGal} gal)`);
-  html += resultRow(`Reserve (${r.reserveMinutes} min)`, `${r.reserveFuelL} L (${r.reserveFuelGal} gal)`);
-  html += resultRow('Total Required', `${r.totalRequiredL} L (${r.totalRequiredGal} gal)`, true);
+  html += resultRow('Trip Fuel', displayFuel(r.tripFuelL, r.tripFuelGal));
+  html += resultRow(`Reserve (${r.reserveMinutes} min)`, displayFuel(r.reserveFuelL, r.reserveFuelGal));
+  html += resultRow('Total Required', displayFuel(r.totalRequiredL, r.totalRequiredGal), true);
 
-  html += separatorRow('Fuel On Board (total)', `${r.fobL} L (${r.fobGal.toFixed(1)} gal)`);
+  html += separatorRow('Fuel On Board (total)', displayFuel(r.fobL, r.fobGal));
   if (r.unusableL > 0) {
-    html += resultRow('Unusable Fuel', `${r.unusableL} L`);
-    html += resultRow('Usable Fuel', `${r.usableFobL} L (${r.usableFobGal.toFixed(1)} gal)`);
+    html += resultRow('Unusable Fuel', displayFuel(r.unusableL, r.unusableL * 0.264172));
+    html += resultRow('Usable Fuel', displayFuel(r.usableFobL, r.usableFobGal));
   }
   html += resultRow('Remaining After Trip',
-    `${r.remainingL} L (${r.remainingGal.toFixed(1)} gal)`,
+    displayFuel(r.remainingL, r.remainingGal),
     false, remainClass);
   html += resultRow('Endurance After Trip', formatDuration(r.enduranceAfterTripMin), false,
     r.enduranceAfterTripMin < r.reserveMinutes ? 'results-list__value--caution' : '');
@@ -222,7 +222,7 @@ function renderResults(el, r) {
 
   if (!r.sufficient) {
     const shortL = Math.abs(r.remainingL - r.reserveFuelL);
-    html += `<div class="alert alert--error">⚠ Insufficient fuel — short by ${shortL.toFixed(1)} L for ${r.reserveMinutes} min reserve.</div>`;
+    html += `<div class="alert alert--error">⚠ Insufficient fuel — short by ${displayFuel(shortL, shortL * 0.264172)} for ${r.reserveMinutes} min reserve.</div>`;
   } else if (r.remainingL < 0) {
     html += `<div class="alert alert--error">⚠ Trip fuel exceeds fuel on board. Cannot complete trip.</div>`;
   } else if (r.remainingL > 0 && r.remainingL < r.reserveFuelL * 1.2) {

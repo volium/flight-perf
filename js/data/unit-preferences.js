@@ -137,3 +137,34 @@ export function fuelUnitLabel(unit) {
     default: return unit;
   }
 }
+
+/**
+ * Format an altitude value from internal ft to the user's preferred unit.
+ * For display in results — not for form input conversion.
+ *
+ * @param {number} valueFt – Value in feet (internal unit)
+ * @returns {{ value: number, unit: string }}
+ */
+export function displayAltitude(valueFt) {
+  const units = getUnits();
+  if (units.altitude === 'm') {
+    return { value: Math.round(convert.ftToM(valueFt)), unit: 'm' };
+  }
+  return { value: Math.round(valueFt), unit: 'ft' };
+}
+
+/**
+ * Format a fuel volume for display using the user's preferred fuel unit.
+ * Takes both L and gal values and returns the preferred one.
+ *
+ * @param {number} litres  – Value in litres
+ * @param {number} gallons – Value in US gallons
+ * @returns {string} Formatted string like "150 L" or "39.6 US gal"
+ */
+export function displayFuel(litres, gallons) {
+  const units = getUnits();
+  if (units.fuel === 'L') {
+    return `${Math.round(litres * 10) / 10} L`;
+  }
+  return `${Math.round(gallons * 10) / 10} gal`;
+}

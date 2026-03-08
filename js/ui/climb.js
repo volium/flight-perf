@@ -3,7 +3,7 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { displayUnit, buildRefNote, esc } from './perf-ui-common.js';
-import { getUnits, elevationPlaceholder, altitudePlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
+import { getUnits, elevationPlaceholder, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, displayAltitude } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'climb_inputs';
 
@@ -173,6 +173,10 @@ function renderResults(el, r) {
   const rocTgtClass = rocSeverityClass(r.rocAtTarget);
   const avgClass = r.averageRoc != null ? rocSeverityClass(r.averageRoc) : '';
 
+  const depPa = displayAltitude(r.departurePa);
+  const tgtPa = displayAltitude(r.targetPa);
+  const altClimb = displayAltitude(r.altitudeToClimb);
+
   let html = `<ul class="results-list">`;
 
   if (r.timeToClimb != null) {
@@ -186,15 +190,15 @@ function renderResults(el, r) {
   html += `
     <li class="results-list__item">
       <span class="results-list__label">Departure Pressure Alt</span>
-      <span class="results-list__value">${formatNumber(r.departurePa)} ft</span>
+      <span class="results-list__value">${formatNumber(depPa.value)} ${depPa.unit}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Target Pressure Alt</span>
-      <span class="results-list__value">${formatNumber(r.targetPa)} ft</span>
+      <span class="results-list__value">${formatNumber(tgtPa.value)} ${tgtPa.unit}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Altitude to Climb</span>
-      <span class="results-list__value">${formatNumber(r.altitudeToClimb)} ft</span>
+      <span class="results-list__value">${formatNumber(altClimb.value)} ${altClimb.unit}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">ROC at Departure</span>
@@ -222,12 +226,14 @@ function renderResults(el, r) {
 
   if (r.transitionPa != null && r.cruiseClimbFactor < 1) {
     const pct = Math.round(r.cruiseClimbFactor * 100);
+    const transPa = displayAltitude(r.transitionPa);
     const speedNote = r.cruiseClimbSpeed ? ` at ${r.cruiseClimbSpeed} KIAS` : '';
-    html += `<div class="alert alert--info">ℹ Vy climb below ${formatNumber(r.transitionPa)} ft PA, then cruise climb${speedNote} (≈${pct}% of book ROC) above.</div>`;
+    html += `<div class="alert alert--info">ℹ Vy climb below ${formatNumber(transPa.value)} ${transPa.unit} PA, then cruise climb${speedNote} (≈${pct}% of book ROC) above.</div>`;
   }
 
   if (r.ceilingReached) {
-    html += `<div class="alert alert--error">⚠ Service ceiling reached at ${formatNumber(r.ceilingAltitude)} ft PA — rate of climb dropped to zero before reaching target altitude.</div>`;
+    const ceilAlt = displayAltitude(r.ceilingAltitude);
+    html += `<div class="alert alert--error">⚠ Service ceiling reached at ${formatNumber(ceilAlt.value)} ${ceilAlt.unit} PA — rate of climb dropped to zero before reaching target altitude.</div>`;
   }
 
   if (r.extrapolated) {

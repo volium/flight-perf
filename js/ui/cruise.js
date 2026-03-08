@@ -3,7 +3,7 @@ import { convert, formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { buildRefNote, esc } from './perf-ui-common.js';
-import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault } from '../data/unit-preferences.js';
+import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, displayAltitude } from '../data/unit-preferences.js';
 
 const STORAGE_KEY = 'cruise_inputs';
 
@@ -139,10 +139,12 @@ export function initCruise(panelEl) {
 function renderResults(el, r) {
   let html = `<ul class="results-list">`;
 
+  const pa = displayAltitude(r.pressureAltitude);
+
   html += `
     <li class="results-list__item">
       <span class="results-list__label">Pressure Altitude</span>
-      <span class="results-list__value">${formatNumber(r.pressureAltitude)} ft</span>
+      <span class="results-list__value">${formatNumber(pa.value)} ${pa.unit}</span>
     </li>
     <li class="results-list__item">
       <span class="results-list__label">Engine RPM</span>
