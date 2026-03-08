@@ -57,10 +57,12 @@ export function densityRatio(densAlt) {
 
 /**
  * Full density altitude calculation from raw user inputs.
- * Accepts temperature in either °C or °F, and pressure in inHg or hPa.
+ * Accepts temperature in either °C or °F, pressure in inHg or hPa,
+ * and field elevation in ft or m.
  *
  * @param {object} inputs
- * @param {number} inputs.fieldElevation – feet
+ * @param {number} inputs.fieldElevation – field elevation value
+ * @param {string} inputs.elevUnit       – "ft" or "m"
  * @param {number} inputs.altimeter      – altimeter setting (in inHg or hPa)
  * @param {string} inputs.altimeterUnit  – "inHg" or "hPa"
  * @param {number} inputs.oat            – outside air temperature
@@ -68,13 +70,15 @@ export function densityRatio(densAlt) {
  * @returns {object} results
  */
 export function calculateDensityAltitude(inputs) {
-  const { fieldElevation, altimeter, altimeterUnit, oat, tempUnit } = inputs;
+  const { fieldElevation, elevUnit, altimeter, altimeterUnit, oat, tempUnit } = inputs;
 
+  const fieldElevFt =
+    elevUnit === 'm' ? convert.mToFt(fieldElevation) : fieldElevation;
   const altInHg =
     altimeterUnit === 'hPa' ? convert.hPaToInHg(altimeter) : altimeter;
   const oatC = tempUnit === 'F' ? convert.fToC(oat) : oat;
 
-  const pressAlt = pressureAltitude(fieldElevation, altInHg);
+  const pressAlt = pressureAltitude(fieldElevFt, altInHg);
   const isa = isaTemperature(pressAlt);
   const deviation = oatC - isa;
   const densAlt = densityAltitude(pressAlt, oatC);

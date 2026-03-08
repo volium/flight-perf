@@ -6,6 +6,7 @@ const STORAGE_KEY = 'density_inputs';
 
 const DEFAULTS = {
   fieldElevation: '',
+  elevUnit: 'ft',
   altimeter: '29.92',
   altimeterUnit: 'inHg',
   oat: '',
@@ -20,12 +21,21 @@ export function initDensityAltitude(panelEl) {
       <div class="panel">
         <h2 class="panel__title">Density Altitude</h2>
 
-        <div class="form-group">
-          <label class="form-label" for="da-field-elev">Field Elevation</label>
-          <div class="form-suffix">
-            <input class="form-input" id="da-field-elev" type="number" inputmode="numeric"
-                   placeholder="e.g. 1200" value="${esc(saved.fieldElevation)}">
-            <span class="form-suffix__label">ft</span>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="da-field-elev">Field Elevation</label>
+            <div class="form-suffix">
+              <input class="form-input" id="da-field-elev" type="number" inputmode="numeric"
+                     placeholder="${saved.elevUnit === 'm' ? 'e.g. 365' : 'e.g. 1200'}" value="${esc(saved.fieldElevation)}">
+              <span class="form-suffix__label" id="da-elev-suffix">${saved.elevUnit}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="da-elev-unit">Unit</label>
+            <select class="form-input" id="da-elev-unit">
+              <option value="ft" ${saved.elevUnit === 'ft' ? 'selected' : ''}>ft</option>
+              <option value="m" ${saved.elevUnit === 'm' ? 'selected' : ''}>m</option>
+            </select>
           </div>
         </div>
 
@@ -81,6 +91,8 @@ export function initDensityAltitude(panelEl) {
   `;
 
   const elev = panelEl.querySelector('#da-field-elev');
+  const elevUnit = panelEl.querySelector('#da-elev-unit');
+  const elevSuffix = panelEl.querySelector('#da-elev-suffix');
   const oat = panelEl.querySelector('#da-oat');
   const tempUnit = panelEl.querySelector('#da-temp-unit');
   const tempSuffix = panelEl.querySelector('#da-temp-suffix');
@@ -90,11 +102,13 @@ export function initDensityAltitude(panelEl) {
   const calcBtn = panelEl.querySelector('#da-calculate');
   const resultsEl = panelEl.querySelector('#da-results');
 
+  elevUnit.addEventListener('change', () => {
+    elevSuffix.textContent = elevUnit.value;
+    elev.placeholder = elevUnit.value === 'm' ? 'e.g. 365' : 'e.g. 1200';
+  });
+
   tempUnit.addEventListener('change', () => {
     tempSuffix.textContent = `°${tempUnit.value}`;
-    if (tempUnit.value === 'hPa') {
-      altimeter.placeholder = '1013.25';
-    }
   });
 
   altUnit.addEventListener('change', () => {
@@ -116,6 +130,7 @@ export function initDensityAltitude(panelEl) {
 
     storage.set(STORAGE_KEY, {
       fieldElevation: elev.value,
+      elevUnit: elevUnit.value,
       altimeter: altimeter.value,
       altimeterUnit: altUnit.value,
       oat: oat.value,
@@ -124,6 +139,7 @@ export function initDensityAltitude(panelEl) {
 
     const results = calculateDensityAltitude({
       fieldElevation,
+      elevUnit: elevUnit.value,
       altimeter: altVal,
       altimeterUnit: altUnit.value,
       oat: oatVal,
