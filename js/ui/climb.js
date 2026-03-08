@@ -193,7 +193,7 @@ function renderResults(el, r) {
     html += `
       <li class="results-list__item results-list__item--highlight">
         <span class="results-list__label">Estimated Time to Climb</span>
-        <span class="results-list__value">${formatNumber(r.timeToClimb, 1)} min</span>
+        <span class="results-list__value">${formatNumber(r.timeToClimb, 1)} min (~${Math.round(r.timeToClimb)} min)</span>
       </li>`;
   }
 
