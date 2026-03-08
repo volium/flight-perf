@@ -7,6 +7,7 @@ import { initLanding } from './ui/landing.js';
 import { initClimb } from './ui/climb.js';
 import { initCruise } from './ui/cruise.js';
 import { initWeightBalance } from './ui/weight-balance.js';
+import { initFuel } from './ui/fuel.js';
 import { loadProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
 
@@ -54,6 +55,7 @@ function initCalculators() {
   initWeightBalance(document.getElementById('panel-wb'));
   initDensityAltitude(document.getElementById('panel-density'));
   initCrosswind(document.getElementById('panel-crosswind'));
+  initFuel(document.getElementById('panel-fuel'));
 }
 
 function updateAircraftDisplay(profile) {
