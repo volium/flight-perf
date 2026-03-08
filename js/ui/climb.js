@@ -116,7 +116,7 @@ export function initClimb(panelEl) {
             <label class="form-label" for="cl-cruise-speed">Cruise Climb Speed</label>
             <div class="form-suffix">
               <input class="form-input" id="cl-cruise-speed" type="number" inputmode="numeric"
-                     min="${climb.data ? '' : ''}" step="1"
+                     step="1"
                      placeholder="e.g. 85" value="${esc(saved.cruiseClimbSpeed)}">
               <span class="form-suffix__label">KIAS</span>
             </div>

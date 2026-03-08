@@ -2,6 +2,7 @@ import { calculateCrosswind } from '../calc/crosswind.js';
 import { formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
+import { esc } from './perf-ui-common.js';
 
 const STORAGE_KEY = 'crosswind_inputs';
 
@@ -518,9 +519,4 @@ function xwStatusClass(status) {
     : status === 'caution'
       ? 'results-list__value--caution'
       : '';
-}
-
-function esc(val) {
-  if (val == null) return '';
-  return String(val).replace(/"/g, '&quot;');
 }

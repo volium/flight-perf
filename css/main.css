@@ -393,33 +393,6 @@ select.form-input {
   font-weight: var(--font-weight-bold);
 }
 
-/* ── Runway Shortcut Buttons ── */
-.runway-shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin-top: var(--space-sm);
-}
-
-.runway-btn {
-  padding: var(--space-xs) var(--space-sm);
-  font-family: var(--font-family);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-  background-color: var(--color-bg-tab);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.runway-btn:hover {
-  background-color: var(--color-accent);
-  color: #ffffff;
-  border-color: var(--color-accent);
-}
-
 /* ── Form Optional Label ── */
 .form-label--optional {
   font-weight: var(--font-weight-normal);

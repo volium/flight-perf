@@ -1,6 +1,7 @@
 import { calculateDensityAltitude } from '../calc/density-altitude.js';
 import { formatNumber } from '../engine/units.js';
 import { storage } from '../data/storage.js';
+import { esc } from './perf-ui-common.js';
 
 const STORAGE_KEY = 'density_inputs';
 
@@ -214,9 +215,4 @@ function densityAltitudeAlert(r) {
     return `<div class="alert alert--info">ℹ Below sea level standard — performance better than standard conditions.</div>`;
   }
   return '';
-}
-
-function esc(val) {
-  if (val == null) return '';
-  return String(val).replace(/"/g, '&quot;');
 }

@@ -1,6 +1,5 @@
 import { interpolateFromTable } from '../engine/interpolation.js';
 import { pressureAltitude } from './density-altitude.js';
-import { convert } from '../engine/units.js';
 
 /**
  * Perform climb performance calculation from profile data (single altitude).
