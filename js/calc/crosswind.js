@@ -45,7 +45,7 @@ export function calculateCrosswind(inputs) {
   const { windDirection, windSpeed, windSpeedUnit, runwayHeading, gustSpeed, maxCrosswind } = inputs;
 
   const speedKt = windSpeedUnit === 'kmh' ? windSpeed * 0.539957 : windSpeed;
-  const gustKt = gustSpeed != null && !isNaN(gustSpeed)
+  const gustKt = gustSpeed != null && !isNaN(gustSpeed) && gustSpeed > 0
     ? (windSpeedUnit === 'kmh' ? gustSpeed * 0.539957 : gustSpeed)
     : null;
 

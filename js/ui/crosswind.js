@@ -471,103 +471,70 @@ function renderResults(el, r) {
   // Diagram
   let html = renderDiagram(r);
 
-  // ── Selected Runway ──
-  const windLabel = s.isHeadwind ? 'Headwind' : 'Tailwind';
-  const windValue = s.isHeadwind ? s.headwind : s.tailwind;
-  const windIcon = s.isHeadwind ? '↓' : '↑';
-  const xwDir = fmtXwDir(s.crosswindDirection);
-  const xwClass = xwStatusClass(r.crosswindStatus);
+  // ── Side-by-side runway columns ──
+  html += '<div class="xw-columns">';
+  html += renderRunwayColumn(rwyLabel, s, g, r.crosswindStatus);
+  html += renderRunwayColumn(recipLabel, recip, gRecip, r.crosswindStatus);
+  html += '</div>';
 
-  html += `<h3 class="results-section__title">Runway ${rwyLabel}</h3>`;
-  html += `
-    <ul class="results-list">
-      <li class="results-list__item">
-        <span class="results-list__label">${windIcon} ${windLabel}</span>
-        <span class="results-list__value">${formatNumber(windValue, 1)} kt</span>
-      </li>
-      <li class="results-list__item results-list__item--highlight">
-        <span class="results-list__label">${xwDir || '↔'} Crosswind</span>
-        <span class="results-list__value ${xwClass}">${formatNumber(s.crosswind, 1)} kt</span>
-      </li>
-      <li class="results-list__item">
-        <span class="results-list__label">Wind Angle</span>
-        <span class="results-list__value">${s.angleNormalized}°</span>
-      </li>`;
-
-  if (g) {
-    const gustWindLabel = g.isHeadwind ? 'Gust Headwind' : 'Gust Tailwind';
-    const gustWindValue = g.isHeadwind ? g.headwind : g.tailwind;
-    const gustXwDir = fmtXwDir(g.crosswindDirection);
-
-    html += `
-      <li class="results-list__item results-list__item--separator">
-        <span class="results-list__label">${windIcon} ${gustWindLabel}</span>
-        <span class="results-list__value">${formatNumber(gustWindValue, 1)} kt</span>
-      </li>
-      <li class="results-list__item">
-        <span class="results-list__label">${gustXwDir || '↔'} Gust Crosswind</span>
-        <span class="results-list__value ${xwClass}">${formatNumber(g.crosswind, 1)} kt</span>
-      </li>`;
-  }
-
+  // ── Shared info ──
   if (r.maxCrosswind != null) {
-    html += `
-      <li class="results-list__item">
-        <span class="results-list__label">Max Demonstrated Crosswind</span>
-        <span class="results-list__value">${formatNumber(r.maxCrosswind)} kt</span>
-      </li>`;
+    html += `<div class="xw-shared">
+      <span class="results-list__label">Max Demonstrated Crosswind</span>
+      <span class="results-list__value">${formatNumber(r.maxCrosswind)} kt</span>
+    </div>`;
   }
-
-  html += '</ul>';
-
-  // ── Reciprocal Runway ──
-  const recipWindLabel = recip.isHeadwind ? 'Headwind' : 'Tailwind';
-  const recipWindValue = recip.isHeadwind ? recip.headwind : recip.tailwind;
-  const recipWindIcon = recip.isHeadwind ? '↓' : '↑';
-  const recipXwDir = fmtXwDir(recip.crosswindDirection);
-
-  html += `<h3 class="results-section__title">Reciprocal Runway ${recipLabel}</h3>`;
-  html += `
-    <ul class="results-list">
-      <li class="results-list__item">
-        <span class="results-list__label">${recipWindIcon} ${recipWindLabel}</span>
-        <span class="results-list__value">${formatNumber(recipWindValue, 1)} kt</span>
-      </li>
-      <li class="results-list__item">
-        <span class="results-list__label">${recipXwDir || '↔'} Crosswind</span>
-        <span class="results-list__value">${formatNumber(recip.crosswind, 1)} kt</span>
-      </li>`;
-
-  if (gRecip) {
-    const grWindLabel = gRecip.isHeadwind ? 'Gust Headwind' : 'Gust Tailwind';
-    const grWindValue = gRecip.isHeadwind ? gRecip.headwind : gRecip.tailwind;
-    const grXwDir = fmtXwDir(gRecip.crosswindDirection);
-
-    html += `
-      <li class="results-list__item results-list__item--separator">
-        <span class="results-list__label">${recipWindIcon} ${grWindLabel}</span>
-        <span class="results-list__value">${formatNumber(grWindValue, 1)} kt</span>
-      </li>
-      <li class="results-list__item">
-        <span class="results-list__label">${grXwDir || '↔'} Gust Crosswind</span>
-        <span class="results-list__value">${formatNumber(gRecip.crosswind, 1)} kt</span>
-      </li>`;
-  }
-
-  html += '</ul>';
 
   // ── Alerts ──
   if (r.crosswindStatus === 'exceeds') {
-    html += `<div class="alert alert--error">⚠ Crosswind exceeds maximum demonstrated crosswind component (${r.maxCrosswind} kt).</div>`;
+    html += `<div class="alert alert--error">⚠ Crosswind exceeds max demonstrated component (${r.maxCrosswind} kt).</div>`;
   } else if (r.crosswindStatus === 'caution') {
-    html += `<div class="alert alert--warning">⚠ Crosswind approaching maximum demonstrated limit (${r.maxCrosswind} kt).</div>`;
+    html += `<div class="alert alert--warning">⚠ Crosswind approaching max demonstrated limit (${r.maxCrosswind} kt).</div>`;
   }
 
   if (s.isTailwind) {
-    html += `<div class="alert alert--warning">⚠ Tailwind component on Runway ${rwyLabel} — consider Runway ${recipLabel}.</div>`;
+    html += `<div class="alert alert--warning">⚠ Tailwind on Rwy ${rwyLabel} — consider Rwy ${recipLabel}.</div>`;
   }
 
   el.innerHTML = html;
+}
+
+function renderRunwayColumn(label, steady, gust, xwStatus) {
+  const windLabel = steady.isHeadwind ? 'Headwind' : 'Tailwind';
+  const windValue = steady.isHeadwind ? steady.headwind : steady.tailwind;
+  const windIcon = steady.isHeadwind ? '↓' : '↑';
+  const xwDir = fmtXwDir(steady.crosswindDirection);
+  const xwClass = xwStatusClass(xwStatus);
+
+  let html = `<div class="xw-col">
+    <h3 class="xw-col__title">Rwy ${label}</h3>
+    <div class="xw-col__row">
+      <span class="xw-col__label">${windIcon} ${windLabel}</span>
+      <span class="xw-col__value">${formatNumber(windValue, 1)} kt</span>
+    </div>
+    <div class="xw-col__row xw-col__row--highlight">
+      <span class="xw-col__label">${xwDir || '↔'} Crosswind</span>
+      <span class="xw-col__value ${xwClass}">${formatNumber(steady.crosswind, 1)} kt</span>
+    </div>`;
+
+  if (gust) {
+    const gustWindLabel = gust.isHeadwind ? 'Gust HW' : 'Gust TW';
+    const gustWindValue = gust.isHeadwind ? gust.headwind : gust.tailwind;
+    const gustXwDir = fmtXwDir(gust.crosswindDirection);
+
+    html += `
+    <div class="xw-col__row xw-col__row--separator">
+      <span class="xw-col__label">${windIcon} ${gustWindLabel}</span>
+      <span class="xw-col__value">${formatNumber(gustWindValue, 1)} kt</span>
+    </div>
+    <div class="xw-col__row">
+      <span class="xw-col__label">${gustXwDir || '↔'} Gust XW</span>
+      <span class="xw-col__value ${xwClass}">${formatNumber(gust.crosswind, 1)} kt</span>
+    </div>`;
+  }
+
+  html += '</div>';
+  return html;
 }
 
 function fmtXwDir(dir) {
