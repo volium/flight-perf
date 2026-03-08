@@ -452,7 +452,7 @@ function renderResults(el, r) {
   // ── Selected Runway ──
   const windLabel = s.isHeadwind ? 'Headwind' : 'Tailwind';
   const windValue = s.isHeadwind ? s.headwind : s.tailwind;
-  const windIcon = s.isHeadwind ? '↑' : '↓';
+  const windIcon = s.isHeadwind ? '↓' : '↑';
   const xwDir = fmtXwDir(s.crosswindDirection);
   const xwClass = xwStatusClass(r.crosswindStatus);
 
@@ -464,7 +464,7 @@ function renderResults(el, r) {
         <span class="results-list__value">${formatNumber(windValue, 1)} kt</span>
       </li>
       <li class="results-list__item results-list__item--highlight">
-        <span class="results-list__label">↔ Crosswind ${xwDir}</span>
+        <span class="results-list__label">${xwDir || '↔'} Crosswind</span>
         <span class="results-list__value ${xwClass}">${formatNumber(s.crosswind, 1)} kt</span>
       </li>
       <li class="results-list__item">
@@ -483,7 +483,7 @@ function renderResults(el, r) {
         <span class="results-list__value">${formatNumber(gustWindValue, 1)} kt</span>
       </li>
       <li class="results-list__item">
-        <span class="results-list__label">↔ Gust Crosswind ${gustXwDir}</span>
+        <span class="results-list__label">${gustXwDir || '↔'} Gust Crosswind</span>
         <span class="results-list__value ${xwClass}">${formatNumber(g.crosswind, 1)} kt</span>
       </li>`;
   }
@@ -501,7 +501,7 @@ function renderResults(el, r) {
   // ── Reciprocal Runway ──
   const recipWindLabel = recip.isHeadwind ? 'Headwind' : 'Tailwind';
   const recipWindValue = recip.isHeadwind ? recip.headwind : recip.tailwind;
-  const recipWindIcon = recip.isHeadwind ? '↑' : '↓';
+  const recipWindIcon = recip.isHeadwind ? '↓' : '↑';
   const recipXwDir = fmtXwDir(recip.crosswindDirection);
 
   html += `<h3 class="results-section__title">Reciprocal Runway ${recipLabel}</h3>`;
@@ -512,7 +512,7 @@ function renderResults(el, r) {
         <span class="results-list__value">${formatNumber(recipWindValue, 1)} kt</span>
       </li>
       <li class="results-list__item">
-        <span class="results-list__label">↔ Crosswind ${recipXwDir}</span>
+        <span class="results-list__label">${recipXwDir || '↔'} Crosswind</span>
         <span class="results-list__value">${formatNumber(recip.crosswind, 1)} kt</span>
       </li>`;
 
@@ -527,7 +527,7 @@ function renderResults(el, r) {
         <span class="results-list__value">${formatNumber(grWindValue, 1)} kt</span>
       </li>
       <li class="results-list__item">
-        <span class="results-list__label">↔ Gust Crosswind ${grXwDir}</span>
+        <span class="results-list__label">${grXwDir || '↔'} Gust Crosswind</span>
         <span class="results-list__value">${formatNumber(gRecip.crosswind, 1)} kt</span>
       </li>`;
   }
@@ -549,7 +549,7 @@ function renderResults(el, r) {
 }
 
 function fmtXwDir(dir) {
-  return dir === 'right' ? 'from Right' : dir === 'left' ? 'from Left' : '';
+  return dir === 'right' ? '←' : dir === 'left' ? '→' : '';
 }
 
 function xwStatusClass(status) {
