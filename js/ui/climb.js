@@ -17,7 +17,7 @@ const DEFAULTS = {
 
 export function initClimb(panelEl) {
   const profile = getProfile();
-  const saved = storage.get(STORAGE_KEY, DEFAULTS);
+  const saved = { ...DEFAULTS, ...storage.get(STORAGE_KEY, DEFAULTS) };
   const climb = profile?.performance?.climb;
 
   if (!climb) {
