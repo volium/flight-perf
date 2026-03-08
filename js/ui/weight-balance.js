@@ -218,12 +218,12 @@ function renderResults(el, r, wb) {
 
   for (const s of r.stations) {
     if (s.overweight) {
-      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(s.weight, 1)} / ${formatNumber(s.maxWeight)} ${wu}).</div>`;
+      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(s.weight, 1)} > ${formatNumber(s.maxWeight)} ${wu}).</div>`;
     }
   }
 
   for (const w of r.constraintWarnings) {
-    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(w.combined, 1)} / ${formatNumber(w.max)} ${wu}).</div>`;
+    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(w.combined, 1)} > ${formatNumber(w.max)} ${wu}).</div>`;
   }
 
   el.innerHTML = html;
