@@ -499,6 +499,21 @@ select.form-input {
   border-top: 1px solid var(--color-border);
 }
 
+/* ── Takeoff / Landing Reference Note ── */
+.to-ref-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-bg-tab);
+  border-radius: var(--border-radius);
+  line-height: 1.6;
+}
+
+.to-ref-note strong {
+  color: var(--color-text-label);
+}
+
 /* ── Crosswind Diagram ── */
 .xw-diagram {
   display: flex;
