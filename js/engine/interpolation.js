@@ -19,7 +19,7 @@
  */
 export function interpolate1D(xs, ys, x, opts = {}) {
   if (xs.length !== ys.length || xs.length === 0) {
-    return { value: NaN, clamped: false, clampedTo: null };
+    return { value: NaN, clamped: false, clampedTo: null, extrapolated: false };
   }
 
   if (xs.length === 1) {
@@ -60,6 +60,7 @@ export function interpolate1D(xs, ys, x, opts = {}) {
 
   const x0 = xs[i], x1 = xs[i + 1];
   const y0 = ys[i], y1 = ys[i + 1];
+  if (x1 === x0) return { value: y0, clamped: false, clampedTo: null, extrapolated: false };
   const t = (x - x0) / (x1 - x0);
   const value = y0 + t * (y1 - y0);
 
