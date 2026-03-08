@@ -13,14 +13,16 @@ export function calculateWindComponents(windDir, windSpeed, runwayHdg) {
   const headwind = windSpeed * Math.cos(angleRad);
   const crosswind = windSpeed * Math.sin(angleRad);
 
+  const roundedHeadwind = Math.round(headwind * 10) / 10 || 0;
+
   return {
-    headwind: Math.round(headwind * 10) / 10,
-    crosswind: Math.round(Math.abs(crosswind) * 10) / 10,
-    crosswindRaw: Math.round(crosswind * 10) / 10,
+    headwind: roundedHeadwind,
+    crosswind: Math.round(Math.abs(crosswind) * 10) / 10 || 0,
+    crosswindRaw: Math.round(crosswind * 10) / 10 || 0,
     crosswindDirection: crosswind > 0.05 ? 'right' : crosswind < -0.05 ? 'left' : 'none',
-    isHeadwind: headwind >= 0,
-    isTailwind: headwind < 0,
-    tailwind: headwind < 0 ? Math.round(Math.abs(headwind) * 10) / 10 : 0,
+    isHeadwind: roundedHeadwind >= 0,
+    isTailwind: roundedHeadwind < 0,
+    tailwind: roundedHeadwind < 0 ? Math.abs(roundedHeadwind) : 0,
     angleDeg: Math.round(angleDeg),
     angleNormalized: normalizeAngle(angleDeg),
   };
