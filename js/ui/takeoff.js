@@ -1,21 +1,18 @@
 import { calculateTakeoff } from '../calc/takeoff.js';
 import { formatNumber } from '../engine/units.js';
-import { getAllMarginPresets, getMarginPreset } from '../engine/margins.js';
+import { emptyMargins } from '../engine/margins.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 
 const STORAGE_KEY = 'takeoff_inputs';
-const CUSTOM_MARGIN_KEY = 'takeoff_custom_margins';
 
 const DEFAULTS = {
   surface: '',
-  marginPreset: 'none',
+  marginType: 'none',
+  marginPctValue: '',
+  marginFixedValue: '',
+  marginRoundUp: false,
   distanceUnit: 'ft',
-};
-
-const CUSTOM_MARGIN_DEFAULTS = {
-  groundRoll:        { factor: '', percentage: '', fixed: '', roundUp: '' },
-  totalOverObstacle: { factor: '', percentage: '', fixed: '', roundUp: '' },
 };
 
 export function initTakeoff(panelEl) {
@@ -38,13 +35,6 @@ export function initTakeoff(panelEl) {
     )
     .join('');
 
-  const presetOptions = getAllMarginPresets()
-    .map(
-      (p) =>
-        `<option value="${p.id}" ${saved.marginPreset === p.id ? 'selected' : ''}>${p.name}</option>`,
-    )
-    .join('');
-
   const refCond = takeoff.referenceConditions;
   const refNote = buildRefNote(refCond, takeoff.description);
 
@@ -58,22 +48,42 @@ export function initTakeoff(panelEl) {
           <select class="form-input" id="to-surface">${surfaceOptions}</select>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="to-margin">Safety Margin</label>
-            <select class="form-input" id="to-margin">${presetOptions}</select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="to-unit">Distance Unit</label>
-            <select class="form-input" id="to-unit">
-              <option value="ft" ${saved.distanceUnit === 'ft' ? 'selected' : ''}>ft</option>
-              <option value="m" ${saved.distanceUnit === 'm' ? 'selected' : ''}>m</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label class="form-label" for="to-unit">Distance Unit</label>
+          <select class="form-input" id="to-unit">
+            <option value="ft" ${saved.distanceUnit === 'ft' ? 'selected' : ''}>ft</option>
+            <option value="m" ${saved.distanceUnit === 'm' ? 'selected' : ''}>m</option>
+          </select>
         </div>
 
-        <div id="to-margin-info"></div>
-        <div id="to-custom-margins"></div>
+        <fieldset class="margin-fieldset">
+          <legend class="margin-fieldset__legend">Safety Margin</legend>
+
+          <div class="form-group">
+            <label class="form-label" for="to-margin-type">Type</label>
+            <select class="form-input" id="to-margin-type">
+              <option value="none" ${saved.marginType === 'none' ? 'selected' : ''}>None (POH values)</option>
+              <option value="percentage" ${saved.marginType === 'percentage' ? 'selected' : ''}>Percentage</option>
+              <option value="fixed" ${saved.marginType === 'fixed' ? 'selected' : ''}>Fixed Distance</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="to-margin-value-group" style="display:none">
+            <label class="form-label" id="to-margin-value-label" for="to-margin-value">Value</label>
+            <div class="form-suffix">
+              <input class="form-input" id="to-margin-value" type="number" inputmode="decimal"
+                     min="0" step="any" placeholder="" value="">
+              <span class="form-suffix__label" id="to-margin-value-suffix"></span>
+            </div>
+          </div>
+
+          <div class="form-group" id="to-round-group" style="display:none">
+            <label class="form-checkbox">
+              <input type="checkbox" id="to-margin-round" ${saved.marginRoundUp ? 'checked' : ''}>
+              <span>Round up to nearest 100</span>
+            </label>
+          </div>
+        </fieldset>
 
         <button class="btn btn-primary btn-block" id="to-calculate">Calculate</button>
 
@@ -93,36 +103,106 @@ export function initTakeoff(panelEl) {
   `;
 
   const surfaceEl = panelEl.querySelector('#to-surface');
-  const marginEl = panelEl.querySelector('#to-margin');
   const unitEl = panelEl.querySelector('#to-unit');
+  const marginTypeEl = panelEl.querySelector('#to-margin-type');
+  const marginValueGroup = panelEl.querySelector('#to-margin-value-group');
+  const marginValueEl = panelEl.querySelector('#to-margin-value');
+  const marginValueLabel = panelEl.querySelector('#to-margin-value-label');
+  const marginValueSuffix = panelEl.querySelector('#to-margin-value-suffix');
+  const roundGroup = panelEl.querySelector('#to-round-group');
+  const roundEl = panelEl.querySelector('#to-margin-round');
   const calcBtn = panelEl.querySelector('#to-calculate');
   const resultsEl = panelEl.querySelector('#to-results');
-  const marginInfoEl = panelEl.querySelector('#to-margin-info');
-  const customEl = panelEl.querySelector('#to-custom-margins');
 
-  function updateMarginInfo() {
-    const presetId = marginEl.value;
+  // Sticky values: keep percentage and fixed values independently
+  let stickyPct = saved.marginPctValue || '';
+  let stickyFixed = saved.marginFixedValue || '';
 
-    if (presetId === 'custom') {
-      marginInfoEl.innerHTML = '';
-      renderCustomMarginFields(customEl);
+  function updateMarginUI() {
+    const type = marginTypeEl.value;
+    const unit = unitEl.value;
+
+    if (type === 'none') {
+      marginValueGroup.style.display = 'none';
     } else {
-      customEl.innerHTML = '';
-      marginInfoEl.innerHTML = '';
+      marginValueGroup.style.display = '';
+
+      if (type === 'percentage') {
+        marginValueLabel.textContent = 'Add percentage';
+        marginValueSuffix.textContent = '%';
+        marginValueEl.placeholder = 'e.g. 25';
+        marginValueEl.value = stickyPct;
+      } else {
+        marginValueLabel.textContent = 'Add distance';
+        marginValueSuffix.textContent = unit;
+        marginValueEl.placeholder = unit === 'm' ? 'e.g. 150' : 'e.g. 500';
+        marginValueEl.value = stickyFixed;
+      }
+    }
+
+    roundGroup.style.display = '';
+  }
+
+  // Save the current value to the correct sticky slot before switching
+  marginTypeEl.addEventListener('mousedown', () => {
+    stashCurrentValue();
+  });
+
+  function stashCurrentValue() {
+    const type = marginTypeEl.value;
+    if (type === 'percentage') {
+      stickyPct = marginValueEl.value;
+    } else if (type === 'fixed') {
+      stickyFixed = marginValueEl.value;
     }
   }
 
-  marginEl.addEventListener('change', updateMarginInfo);
-  updateMarginInfo();
+  marginTypeEl.addEventListener('change', updateMarginUI);
+  unitEl.addEventListener('change', updateMarginUI);
+  updateMarginUI();
 
-  function getActiveMargins() {
-    const presetId = marginEl.value;
+  function buildMargins() {
+    const type = marginTypeEl.value;
+    const roundUp = roundEl.checked ? 100 : null;
 
-    if (presetId === 'custom') {
-      return readCustomMarginFields(customEl);
+    if (type === 'none') {
+      if (roundUp) {
+        const margin = { roundUp };
+        return {
+          groundRoll: { ...margin },
+          totalOverObstacle: { ...margin },
+        };
+      }
+      return emptyMargins();
     }
 
-    return getMarginPreset(presetId).takeoff;
+    const val = parseFloat(marginValueEl.value);
+    const margin = {};
+
+    if (type === 'percentage' && !isNaN(val) && val > 0) {
+      margin.percentage = val;
+    } else if (type === 'fixed' && !isNaN(val) && val > 0) {
+      margin.fixed = val;
+    }
+
+    if (roundUp) margin.roundUp = roundUp;
+
+    return {
+      groundRoll: { ...margin },
+      totalOverObstacle: { ...margin },
+    };
+  }
+
+  function saveInputs() {
+    stashCurrentValue();
+    storage.set(STORAGE_KEY, {
+      surface: surfaceEl.value,
+      marginType: marginTypeEl.value,
+      marginPctValue: stickyPct,
+      marginFixedValue: stickyFixed,
+      marginRoundUp: roundEl.checked,
+      distanceUnit: unitEl.value,
+    });
   }
 
   function calculate() {
@@ -132,16 +212,10 @@ export function initTakeoff(panelEl) {
       return;
     }
 
-    const presetId = marginEl.value;
+    saveInputs();
+
+    const margins = buildMargins();
     const distanceUnit = unitEl.value;
-
-    storage.set(STORAGE_KEY, { surface, marginPreset: presetId, distanceUnit });
-
-    if (presetId === 'custom') {
-      saveCustomMargins(customEl);
-    }
-
-    const margins = getActiveMargins();
 
     const results = calculateTakeoff(profile, {
       surface,
@@ -154,7 +228,7 @@ export function initTakeoff(panelEl) {
       return;
     }
 
-    renderResults(resultsEl, results, presetId);
+    renderResults(resultsEl, results, marginTypeEl.value);
   }
 
   calcBtn.addEventListener('click', calculate);
@@ -164,93 +238,9 @@ export function initTakeoff(panelEl) {
   }
 }
 
-/* ── Custom Margin Fields ── */
-
-function renderCustomMarginFields(containerEl) {
-  const saved = storage.get(CUSTOM_MARGIN_KEY, CUSTOM_MARGIN_DEFAULTS);
-
-  containerEl.innerHTML = `
-    <div class="custom-margins">
-      <div class="custom-margins__section">
-        <span class="custom-margins__label">Ground Roll</span>
-        <div class="custom-margins__fields">
-          ${marginField('to-cm-gr-factor', 'Factor', saved.groundRoll.factor, 'e.g. 1.43')}
-          ${marginField('to-cm-gr-pct', '%', saved.groundRoll.percentage, 'e.g. 25')}
-          ${marginField('to-cm-gr-fixed', 'Fixed', saved.groundRoll.fixed, 'e.g. 500')}
-          ${marginField('to-cm-gr-round', 'Round ↑', saved.groundRoll.roundUp, 'e.g. 100')}
-        </div>
-      </div>
-      <div class="custom-margins__section">
-        <span class="custom-margins__label">Over Obstacle</span>
-        <div class="custom-margins__fields">
-          ${marginField('to-cm-to-factor', 'Factor', saved.totalOverObstacle.factor, 'e.g. 1.43')}
-          ${marginField('to-cm-to-pct', '%', saved.totalOverObstacle.percentage, 'e.g. 25')}
-          ${marginField('to-cm-to-fixed', 'Fixed', saved.totalOverObstacle.fixed, 'e.g. 500')}
-          ${marginField('to-cm-to-round', 'Round ↑', saved.totalOverObstacle.roundUp, 'e.g. 100')}
-        </div>
-      </div>
-    </div>`;
-}
-
-function marginField(id, label, value, placeholder) {
-  const v = value != null && value !== '' ? value : '';
-  return `
-    <div class="custom-margins__field">
-      <label class="custom-margins__field-label" for="${id}">${label}</label>
-      <input class="form-input form-input--sm" id="${id}" type="number" inputmode="decimal"
-             step="any" placeholder="${placeholder}" value="${v}">
-    </div>`;
-}
-
-function readCustomMarginFields(containerEl) {
-  function readVal(id) {
-    const el = containerEl.querySelector(`#${id}`);
-    if (!el || el.value === '') return undefined;
-    const n = parseFloat(el.value);
-    return isNaN(n) ? undefined : n;
-  }
-
-  return {
-    groundRoll: {
-      factor:     readVal('to-cm-gr-factor') ?? null,
-      percentage: readVal('to-cm-gr-pct') ?? null,
-      fixed:      readVal('to-cm-gr-fixed') ?? null,
-      roundUp:    readVal('to-cm-gr-round') ?? null,
-    },
-    totalOverObstacle: {
-      factor:     readVal('to-cm-to-factor') ?? null,
-      percentage: readVal('to-cm-to-pct') ?? null,
-      fixed:      readVal('to-cm-to-fixed') ?? null,
-      roundUp:    readVal('to-cm-to-round') ?? null,
-    },
-  };
-}
-
-function saveCustomMargins(containerEl) {
-  function readRaw(id) {
-    const el = containerEl.querySelector(`#${id}`);
-    return el ? el.value : '';
-  }
-
-  storage.set(CUSTOM_MARGIN_KEY, {
-    groundRoll: {
-      factor:     readRaw('to-cm-gr-factor'),
-      percentage: readRaw('to-cm-gr-pct'),
-      fixed:      readRaw('to-cm-gr-fixed'),
-      roundUp:    readRaw('to-cm-gr-round'),
-    },
-    totalOverObstacle: {
-      factor:     readRaw('to-cm-to-factor'),
-      percentage: readRaw('to-cm-to-pct'),
-      fixed:      readRaw('to-cm-to-fixed'),
-      roundUp:    readRaw('to-cm-to-round'),
-    },
-  });
-}
-
 /* ── Results Rendering ── */
 
-function renderResults(el, r, presetId) {
+function renderResults(el, r, marginType) {
   const gr = r.groundRoll;
   const to = r.totalOverObstacle;
   const unit = r.distanceUnit;
@@ -261,9 +251,7 @@ function renderResults(el, r, presetId) {
   html += `</ul>`;
 
   if (gr.marginApplied || to.marginApplied) {
-    const preset = getMarginPreset(presetId);
-    const name = presetId === 'custom' ? 'Custom' : preset.name;
-    html += `<div class="alert alert--info">ℹ Safety margin applied: ${name}</div>`;
+    html += `<div class="alert alert--info">ℹ Safety margin applied (${gr.description})</div>`;
   }
 
   if (r.referenceConditions) {
@@ -315,4 +303,9 @@ function buildRefNote(conditions, description) {
       <strong>POH Reference Conditions</strong><br>
       ${parts.join('<br>')}
     </div>`;
+}
+
+function esc(val) {
+  if (val == null) return '';
+  return String(val).replace(/"/g, '&quot;');
 }

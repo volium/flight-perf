@@ -66,39 +66,11 @@ export function hasActiveMargin(margin) {
 }
 
 /**
- * Built-in margin presets.
+ * Build an empty margin config (no margins applied).
  */
-export const MARGIN_PRESETS = {
-  none: {
-    id: 'none',
-    name: 'None (POH values)',
-    takeoff: {
-      groundRoll: {},
-      totalOverObstacle: {},
-    },
-    landing: {
-      groundRoll: {},
-      totalOverObstacle: {},
-    },
-  },
-  custom: {
-    id: 'custom',
-    name: 'Custom',
-    takeoff: {
-      groundRoll:        {},
-      totalOverObstacle: {},
-    },
-    landing: {
-      groundRoll:        {},
-      totalOverObstacle: {},
-    },
-  },
-};
-
-export function getMarginPreset(id) {
-  return MARGIN_PRESETS[id] || MARGIN_PRESETS.none;
-}
-
-export function getAllMarginPresets() {
-  return Object.values(MARGIN_PRESETS);
+export function emptyMargins() {
+  return {
+    groundRoll: {},
+    totalOverObstacle: {},
+  };
 }
