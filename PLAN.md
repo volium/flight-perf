@@ -7,7 +7,7 @@
 | **Project** | flight-perf |
 | **Repository** | GitHub — hosted via GitHub Pages |
 | **Created** | 2026-03-07 |
-| **Status** | Planning |
+| **Status** | Phase 1 Complete |
 
 ---
 
@@ -989,98 +989,93 @@ flight-perf/
 ├── README.md                   # Project overview & usage
 │
 ├── css/
-│   ├── main.css                # Core styles
-│   ├── variables.css           # CSS custom properties (theme)
-│   └── responsive.css          # Media queries
+│   ├── main.css                # Core styles & components
+│   ├── variables.css           # CSS custom properties (theme, light/dark)
+│   └── responsive.css          # Media queries for breakpoints
 │
 ├── js/
-│   ├── app.js                  # App initialization, routing, tab management
+│   ├── app.js                  # App initialization, profile loading, calculator wiring
 │   ├── ui/
-│   │   ├── tabs.js             # Tab navigation logic
-│   │   ├── forms.js            # Form rendering & input handling
-│   │   ├── results.js          # Results display & formatting
-│   │   └── settings.js         # Settings panel (units, theme, profile)
+│   │   ├── tabs.js             # Tab navigation with keyboard support
+│   │   ├── settings.js         # Settings panel (theme, profile selector)
+│   │   ├── perf-ui-common.js   # Shared UI: margin fieldset, distance results, ref notes
+│   │   ├── takeoff.js          # Takeoff calculator UI
+│   │   ├── landing.js          # Landing calculator UI
+│   │   ├── climb.js            # Climb planner UI
+│   │   ├── cruise.js           # Cruise performance UI
+│   │   ├── weight-balance.js   # Weight & Balance UI with SVG envelope chart
+│   │   ├── density-altitude.js # Density altitude calculator UI
+│   │   ├── crosswind.js        # Crosswind calculator UI with SVG diagram
+│   │   └── fuel.js             # Fuel planner UI
 │   │
 │   ├── calc/
-│   │   ├── density-altitude.js # Density altitude calculation
-│   │   ├── takeoff.js          # Takeoff distance calculation
-│   │   ├── landing.js          # Landing distance calculation
-│   │   ├── climb.js            # Climb performance calculation
-│   │   ├── cruise.js           # Cruise performance calculation
-│   │   ├── weight-balance.js   # Weight & balance calculation
-│   │   ├── crosswind.js        # Crosswind component calculation
-│   │   └── fuel.js             # Fuel planning calculation
+│   │   ├── density-altitude.js # Pressure alt, density alt, ISA formulas
+│   │   ├── takeoff.js          # Takeoff distance (reference_table + interpolation)
+│   │   ├── landing.js          # Landing distance (reference_table + interpolation)
+│   │   ├── climb.js            # Climb rate interpolation + time-to-climb integration
+│   │   ├── cruise.js           # Cruise speed (2D interpolation) + density-corrected fuel
+│   │   ├── weight-balance.js   # W&B: stations, CG, %MAC, envelope check (ray casting)
+│   │   ├── crosswind.js        # Wind component decomposition (trigonometric)
+│   │   └── fuel.js             # Fuel planning with density-corrected flow + usable fuel
 │   │
 │   ├── engine/
-│   │   ├── interpolation.js    # 1D, 2D, multi-D interpolation
-│   │   ├── corrections.js      # Correction factor application
-│   │   ├── margins.js          # Safety margin application & presets
-│   │   └── units.js            # Unit conversion utilities
+│   │   ├── interpolation.js    # 1D linear + 2D bilinear interpolation with clamping
+│   │   ├── margins.js          # Safety margin application (percentage, fixed, roundUp)
+│   │   ├── perf-common.js      # Shared calc: reference table lookup, distance conversion
+│   │   └── units.js            # Unit conversions & number formatting
 │   │
 │   └── data/
-│       ├── profile-loader.js   # Load & validate aircraft profiles
-│       ├── profile-schema.js   # JSON schema definition for validation
-│       ├── fuel-types.js       # Built-in fuel type registry & density lookup
-│       └── storage.js          # localStorage / IndexedDB abstraction
+│       ├── profile-loader.js   # Fetch & validate aircraft profiles
+│       ├── fuel-types.js       # Built-in fuel type registry (100LL, MOGAS, Jet-A, etc.)
+│       └── storage.js          # localStorage abstraction with prefix namespacing
 │
 ├── profiles/
-│   └── sling-lsa.json          # Bundled example profile
+│   └── sling-lsa.json          # N246LT Sling LSA profile (POH data)
 │
-├── icons/
-│   ├── icon-192.png
-│   ├── icon-512.png
-│   └── favicon.ico
-│
-└── tests/
-    ├── interpolation.test.js
-    ├── density-altitude.test.js
-    ├── takeoff.test.js
-    ├── weight-balance.test.js
-    ├── envelope.test.js
-    ├── crosswind.test.js
-    ├── margins.test.js
-    ├── fuel-types.test.js
-    └── units.test.js
+└── icons/
+    ├── icon-192.png
+    ├── icon-512.png
+    └── favicon.ico
 ```
 
 ---
 
 ## 11. Development Phases
 
-### Phase 1 — Foundation (MVP)
+### Phase 1 — Foundation (MVP) ✅ COMPLETE
 
-> Goal: Working app with basic calculations and one aircraft profile.
+> All calculators implemented with one aircraft profile (Sling LSA N246LT).
 
-| Task | Description | Est. Effort |
-|------|-------------|-------------|
-| 1.1 | Project scaffolding (HTML, CSS, JS structure, PWA manifest, service worker) | S |
-| 1.2 | CSS theme system (custom properties, light/dark, responsive grid) | S |
-| 1.3 | Tab navigation and single-page routing | S |
-| 1.4 | Interpolation engine (1D linear, 2D bilinear) | M |
-| 1.5 | Unit conversion utilities | S |
-| 1.6 | Density altitude calculator (formula-based) | S |
-| 1.7 | Crosswind calculator (formula-based) | S |
-| 1.8 | Sling LSA profile — populate with real POH data | M |
-| 1.9 | Takeoff distance calculator (table interpolation + corrections) | M |
-| 1.10 | Landing distance calculator | M |
-| 1.11 | Weight & balance calculator with multi-category envelope check and CG visualization (SVG) | L |
-| 1.12 | Service worker + offline caching | S |
-| 1.13 | Safety margins engine (apply factor/percentage/fixed, rounding, presets) | M |
-| 1.14 | Unit tests for interpolation, calculations, and margins | M |
+| Task | Description | Status |
+|------|-------------|--------|
+| 1.1 | Project scaffolding (HTML, CSS, JS structure, PWA manifest, service worker) | ✅ |
+| 1.2 | CSS theme system (custom properties, light/dark, responsive grid) | ✅ |
+| 1.3 | Tab navigation and single-page routing | ✅ |
+| 1.4 | Interpolation engine (1D linear, 2D bilinear) | ✅ |
+| 1.5 | Unit conversion utilities | ✅ |
+| 1.6 | Density altitude calculator (formula-based) | ✅ |
+| 1.7 | Crosswind calculator (formula-based, SVG diagram) | ✅ |
+| 1.8 | Sling LSA profile — populated with real POH data | ✅ |
+| 1.9 | Takeoff distance calculator (reference_table + safety margins) | ✅ |
+| 1.10 | Landing distance calculator (reference_table + safety margins) | ✅ |
+| 1.11 | Climb planner (interpolation, time-to-climb, cruise climb) | ✅ |
+| 1.12 | Cruise performance calculator (2D interpolation, density-corrected fuel) | ✅ |
+| 1.13 | Weight & Balance calculator (%MAC, envelope chart, ray-casting) | ✅ |
+| 1.14 | Fuel planner (trip fuel, reserves, usable fuel, density correction) | ✅ |
+| 1.15 | Safety margins engine (percentage, fixed, roundUp) | ✅ |
+| 1.16 | Service worker + offline caching | ✅ |
+| 1.17 | Fuel type registry (100LL, MOGAS, Jet-A, etc.) | ✅ |
+| 1.18 | GitHub Pages deployment | ✅ |
 
-**S** = Small (< 2 hrs) · **M** = Medium (2–6 hrs) · **L** = Large (6+ hrs)
-
-### Phase 2 — Full Performance Suite
+### Phase 2 — Enhancements
 
 | Task | Description |
 |------|-------------|
-| 2.1 | Climb performance calculator |
-| 2.2 | Cruise performance calculator |
-| 2.3 | Fuel planning calculator |
-| 2.4 | Pressure altitude calculator |
-| 2.5 | Profile import (file picker + IndexedDB) |
-| 2.6 | Settings persistence (units, theme, last inputs) |
-| 2.7 | Input validation and error messaging |
+| 2.1 | Profile import (file picker + IndexedDB) |
+| 2.2 | Global unit preferences (settings panel) |
+| 2.3 | Input validation and error messaging improvements |
+| 2.4 | Unit tests for interpolation, calculations, and margins |
+| 2.5 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation |
 
 ### Phase 3 — Polish & Extensibility
 
