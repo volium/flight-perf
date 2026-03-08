@@ -1,0 +1,292 @@
+import { calculateWeightBalance } from '../calc/weight-balance.js';
+import { formatNumber } from '../engine/units.js';
+import { storage } from '../data/storage.js';
+import { getProfile } from '../app.js';
+import { displayUnit, esc } from './perf-ui-common.js';
+
+const STORAGE_KEY = 'wb_inputs';
+
+export function initWeightBalance(panelEl) {
+  const profile = getProfile();
+  const wb = profile?.weightBalance;
+
+  if (!wb) {
+    panelEl.innerHTML = `
+      <div class="panel">
+        <div class="alert alert--warning">⚠ No weight & balance data available in the loaded profile.</div>
+      </div>`;
+    return;
+  }
+
+  const saved = storage.get(STORAGE_KEY, {});
+  const fuelConfig = profile.fuel;
+  const fuelUnit = fuelConfig?.inputUnit || 'L';
+  const fuelLabel = fuelUnitLabel(fuelUnit);
+  const weightUnit = wb.weightUnit || 'kg';
+
+  const nonFuelStations = wb.stations.filter((s) => !s.fuelStation);
+
+  let stationHTML = '';
+  for (const station of nonFuelStations) {
+    const savedVal = saved[station.id] ?? '';
+    const maxNote = station.maxWeight
+      ? `<div class="form-hint">Max: ${station.maxWeight.value} ${displayUnit(station.maxWeight.unit)}</div>`
+      : '';
+
+    stationHTML += `
+      <div class="form-group">
+        <label class="form-label" for="wb-${station.id}">${station.name}</label>
+        <div class="form-suffix">
+          <input class="form-input" id="wb-${station.id}" type="number" inputmode="decimal"
+                 min="0" step="0.1" placeholder="0" value="${esc(savedVal)}"
+                 data-station-id="${station.id}">
+          <span class="form-suffix__label">${weightUnit}</span>
+        </div>
+        ${maxNote}
+      </div>`;
+  }
+
+  const maxFuel = fuelConfig?.capacity;
+  const maxFuelNote = maxFuel
+    ? `<div class="form-hint">Capacity: ${maxFuel.value} ${maxFuel.unit}${maxFuel.valueUSGal ? ` (${maxFuel.valueUSGal} US gal)` : ''}</div>`
+    : '';
+
+  panelEl.innerHTML = `
+    <div class="tab-panel__layout">
+      <div class="panel">
+        <h2 class="panel__title">Weight &amp; Balance</h2>
+
+        <div class="wb-section-label">Empty Weight: ${formatNumber(profile.limits.emptyWeight.value, 1)} ${weightUnit}</div>
+
+        ${stationHTML}
+
+        <div class="form-group">
+          <label class="form-label" for="wb-fuel">Fuel</label>
+          <div class="form-suffix">
+            <input class="form-input" id="wb-fuel" type="number" inputmode="decimal"
+                   min="0" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
+            <span class="form-suffix__label">${fuelLabel}</span>
+          </div>
+          ${maxFuelNote}
+        </div>
+
+        <button class="btn btn-primary btn-block" id="wb-calculate">Calculate</button>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel__title">Results</h2>
+        <div id="wb-results">
+          <div class="placeholder-message">
+            <div class="placeholder-message__icon">⚖️</div>
+            <div class="placeholder-message__text">Enter weights and press Calculate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const fuelEl = panelEl.querySelector('#wb-fuel');
+  const calcBtn = panelEl.querySelector('#wb-calculate');
+  const resultsEl = panelEl.querySelector('#wb-results');
+
+  function calculate() {
+    const stationWeights = {};
+    for (const station of nonFuelStations) {
+      const el = panelEl.querySelector(`#wb-${station.id}`);
+      stationWeights[station.id] = parseFloat(el?.value) || 0;
+    }
+
+    const fuelQty = parseFloat(fuelEl.value) || 0;
+
+    // Save inputs
+    const toSave = { ...stationWeights, _fuel: fuelEl.value };
+    storage.set(STORAGE_KEY, toSave);
+
+    const results = calculateWeightBalance(profile, {
+      stationWeights,
+      fuelQuantity: fuelQty,
+    });
+
+    if (results.error) {
+      resultsEl.innerHTML = `<div class="alert alert--error">⚠ ${results.error}</div>`;
+      return;
+    }
+
+    renderResults(resultsEl, results, wb);
+  }
+
+  calcBtn.addEventListener('click', calculate);
+
+  panelEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.matches('input')) {
+      calculate();
+    }
+  });
+
+  // Auto-calculate if any saved values exist
+  const hasSaved = Object.values(saved).some((v) => v !== '' && v != null);
+  if (hasSaved) {
+    calculate();
+  }
+}
+
+function renderResults(el, r, wb) {
+  const cgLabel = r.cgReference === 'percent_mac' ? `${r.cgPercent}% MAC` : `${r.cgArm} ${r.armUnit}`;
+
+  const weightClass = r.overweight ? 'results-list__value--danger' : '';
+  const envelopeOk = r.withinAny;
+  const cgClass = envelopeOk ? '' : 'results-list__value--danger';
+
+  const envLabels = r.envelopes
+    .filter((e) => e.within)
+    .map((e) => e.name)
+    .join(', ');
+  const envStatus = envelopeOk ? envLabels : 'OUTSIDE LIMITS';
+  const envClass = envelopeOk ? 'results-list__value--ok' : 'results-list__value--danger';
+
+  let html = renderEnvelopeChart(r, wb);
+
+  html += `<ul class="results-list">`;
+
+  html += `
+    <li class="results-list__item results-list__item--highlight">
+      <span class="results-list__label">Total Weight</span>
+      <span class="results-list__value ${weightClass}">${formatNumber(r.totalWeight, 1)} ${r.weightUnit}</span>
+    </li>
+    <li class="results-list__item">
+      <span class="results-list__label">Max Takeoff Weight</span>
+      <span class="results-list__value">${formatNumber(r.maxWeight)} ${r.weightUnit}</span>
+    </li>
+    <li class="results-list__item">
+      <span class="results-list__label">Weight Remaining</span>
+      <span class="results-list__value ${weightClass}">${r.overweight ? '−' : ''}${formatNumber(Math.abs(r.weightRemaining), 1)} ${r.weightUnit}</span>
+    </li>
+    <li class="results-list__item results-list__item--highlight">
+      <span class="results-list__label">CG Position</span>
+      <span class="results-list__value ${cgClass}">${cgLabel}</span>
+    </li>
+    <li class="results-list__item">
+      <span class="results-list__label">Envelope</span>
+      <span class="results-list__value ${envClass}">${envStatus}</span>
+    </li>`;
+
+  html += `</ul>`;
+
+  // Warnings
+  if (r.overweight) {
+    html += `<div class="alert alert--error">⚠ Total weight exceeds maximum takeoff weight by ${formatNumber(Math.abs(r.weightRemaining), 1)} ${r.weightUnit}.</div>`;
+  }
+
+  if (!r.withinAny) {
+    html += `<div class="alert alert--error">⚠ CG is outside all defined envelopes. Aircraft may be uncontrollable.</div>`;
+  }
+
+  for (const s of r.stations) {
+    if (s.overweight) {
+      html += `<div class="alert alert--warning">⚠ ${s.name} exceeds max weight (${formatNumber(s.weight, 1)} / ${formatNumber(s.maxWeight)} ${r.weightUnit}).</div>`;
+    }
+  }
+
+  for (const w of r.constraintWarnings) {
+    html += `<div class="alert alert--warning">⚠ ${w.description} (${formatNumber(w.combined, 1)} / ${w.max} ${w.unit}).</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+/* ── SVG Envelope Chart ── */
+
+function renderEnvelopeChart(r, wb) {
+  const W = 400, H = 280;
+  const pad = { top: 20, right: 30, bottom: 40, left: 55 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  // Determine axis ranges from all envelope points
+  let allWeights = [], allCGs = [];
+  for (const env of r.envelopePoints) {
+    for (const pt of env.points) {
+      allWeights.push(pt.weight);
+      allCGs.push(pt.cg);
+    }
+  }
+  allWeights.push(r.totalWeight);
+  allCGs.push(r.cgReference === 'percent_mac' ? r.cgPercent : r.cgArm);
+
+  const wMin = Math.floor(Math.min(...allWeights) * 0.95);
+  const wMax = Math.ceil(Math.max(...allWeights) * 1.02);
+  const cgMin = Math.floor(Math.min(...allCGs) - 2);
+  const cgMax = Math.ceil(Math.max(...allCGs) + 2);
+
+  const scaleX = (cg) => pad.left + ((cg - cgMin) / (cgMax - cgMin)) * plotW;
+  const scaleY = (w) => pad.top + plotH - ((w - wMin) / (wMax - wMin)) * plotH;
+
+  let svg = `<svg class="wb-chart__svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+
+  // Grid lines
+  svg += '<g class="wb-grid">';
+  const wStep = niceStep(wMax - wMin, 5);
+  for (let w = Math.ceil(wMin / wStep) * wStep; w <= wMax; w += wStep) {
+    const y = scaleY(w);
+    svg += `<line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="#e2e8f0" stroke-width="0.5"/>`;
+    svg += `<text x="${pad.left - 6}" y="${y}" text-anchor="end" dominant-baseline="middle" class="wb-chart__label">${w}</text>`;
+  }
+  const cgStep = niceStep(cgMax - cgMin, 5);
+  for (let c = Math.ceil(cgMin / cgStep) * cgStep; c <= cgMax; c += cgStep) {
+    const x = scaleX(c);
+    svg += `<line x1="${x}" y1="${pad.top}" x2="${x}" y2="${H - pad.bottom}" stroke="#e2e8f0" stroke-width="0.5"/>`;
+    svg += `<text x="${x}" y="${H - pad.bottom + 14}" text-anchor="middle" class="wb-chart__label">${c}</text>`;
+  }
+  svg += '</g>';
+
+  // Axis labels
+  const cgAxisLabel = r.cgReference === 'percent_mac' ? 'CG (% MAC)' : `CG (${r.armUnit})`;
+  svg += `<text x="${pad.left + plotW / 2}" y="${H - 4}" text-anchor="middle" class="wb-chart__axis-label">${cgAxisLabel}</text>`;
+  svg += `<text x="14" y="${pad.top + plotH / 2}" text-anchor="middle" dominant-baseline="middle" class="wb-chart__axis-label" transform="rotate(-90, 14, ${pad.top + plotH / 2})">Weight (${r.weightUnit})</text>`;
+
+  // Envelope polygons
+  for (const env of r.envelopePoints) {
+    const polyPoints = env.points
+      .map((pt) => `${scaleX(pt.cg).toFixed(1)},${scaleY(pt.weight).toFixed(1)}`)
+      .join(' ');
+    svg += `<polygon points="${polyPoints}" fill="${env.color}" fill-opacity="0.15" stroke="${env.color}" stroke-width="1.5"/>`;
+  }
+
+  // CG point
+  const ptCg = r.cgReference === 'percent_mac' ? r.cgPercent : r.cgArm;
+  const px = scaleX(ptCg);
+  const py = scaleY(r.totalWeight);
+  const ptColor = r.withinAny ? '#22c55e' : '#ef4444';
+
+  svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
+  svg += `<text x="${px.toFixed(1)}" y="${(py - 10).toFixed(1)}" text-anchor="middle" class="wb-chart__point-label" fill="${ptColor}">${formatNumber(r.totalWeight, 1)} ${r.weightUnit}</text>`;
+
+  // Plot border
+  svg += `<rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}" fill="none" stroke="#94a3b8" stroke-width="0.5"/>`;
+
+  svg += '</svg>';
+
+  return `<div class="wb-chart">${svg}</div>`;
+}
+
+function niceStep(range, targetTicks) {
+  const rough = range / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / pow;
+  let step;
+  if (norm < 1.5) step = 1;
+  else if (norm < 3.5) step = 2;
+  else if (norm < 7.5) step = 5;
+  else step = 10;
+  return step * pow;
+}
+
+function fuelUnitLabel(unit) {
+  switch (unit) {
+    case 'us_gal': return 'US gal';
+    case 'L': return 'L';
+    case 'kg': return 'kg';
+    case 'lbs': return 'lbs';
+    default: return unit;
+  }
+}

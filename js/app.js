@@ -6,6 +6,7 @@ import { initTakeoff } from './ui/takeoff.js';
 import { initLanding } from './ui/landing.js';
 import { initClimb } from './ui/climb.js';
 import { initCruise } from './ui/cruise.js';
+import { initWeightBalance } from './ui/weight-balance.js';
 import { loadProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
 
@@ -50,6 +51,7 @@ function initCalculators() {
   initLanding(document.getElementById('panel-landing'));
   initClimb(document.getElementById('panel-climb'));
   initCruise(document.getElementById('panel-cruise'));
+  initWeightBalance(document.getElementById('panel-wb'));
   initDensityAltitude(document.getElementById('panel-density'));
   initCrosswind(document.getElementById('panel-crosswind'));
 }
