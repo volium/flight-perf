@@ -53,6 +53,12 @@ export function calculateCrosswind(inputs) {
     ? calculateWindComponents(windDirection, gustKt, runwayHeading)
     : null;
 
+  const reciprocalHeading = (runwayHeading + 180) % 360;
+  const reciprocal = calculateWindComponents(windDirection, speedKt, reciprocalHeading);
+  const gustReciprocal = gustKt != null
+    ? calculateWindComponents(windDirection, gustKt, reciprocalHeading)
+    : null;
+
   const effectiveCrosswind = gust ? gust.crosswind : steady.crosswind;
 
   let crosswindStatus = 'ok';
@@ -67,6 +73,11 @@ export function calculateCrosswind(inputs) {
   return {
     steady,
     gust,
+    reciprocal,
+    gustReciprocal,
+    runwayHeading,
+    reciprocalHeading,
+    windDirection,
     crosswindStatus,
     maxCrosswind: maxCrosswind ?? null,
     windSpeedKt: Math.round(speedKt * 10) / 10,
