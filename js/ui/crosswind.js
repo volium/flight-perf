@@ -258,7 +258,7 @@ function renderDiagram(r) {
     .xd-rwy   { font: 700 12px -apple-system, system-ui, sans-serif; fill: white; }
     .xd-comp  { font: 600 10px -apple-system, system-ui, sans-serif; fill: #64748b; }
     .xd-comp-c { font: 700 11px -apple-system, system-ui, sans-serif; fill: #475569; }
-    .xd-wind  { font: 600 10px -apple-system, system-ui, sans-serif; }
+    .xd-wind  { font: 700 14px -apple-system, system-ui, sans-serif; }
   </style></defs>`);
 
   // ── Compass rose ──
@@ -401,7 +401,7 @@ function renderDiagram(r) {
     const endY = cy + (stopR / wdLen) * wdy;
 
     const windColor = windSpeedColor(windKt);
-    p.push(svgArrow(windSX, windSY, endX, endY, windColor, 4.5, 12));
+    p.push(svgArrow(windSX, windSY, endX, endY, windColor, 6, 16));
 
     // Wind label — at arrow midpoint, on whichever side is further from the runway
     const wlR = compassR * 0.5;
