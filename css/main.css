@@ -393,6 +393,16 @@ select.form-input {
   font-weight: var(--font-weight-bold);
 }
 
+.settings-section-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
 /* ── Form Optional Label ── */
 .form-label--optional {
   font-weight: var(--font-weight-normal);

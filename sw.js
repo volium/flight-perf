@@ -34,6 +34,7 @@ const APP_SHELL = [
   './js/data/fuel-types.js',
   './js/data/profile-loader.js',
   './js/data/storage.js',
+  './js/data/unit-preferences.js',
   './profiles/sling-lsa.json',
 ];
 

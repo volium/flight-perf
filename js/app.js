@@ -47,7 +47,7 @@ async function init() {
   registerServiceWorker();
 }
 
-function initCalculators() {
+export function initCalculators() {
   initTakeoff(document.getElementById('panel-takeoff'));
   initLanding(document.getElementById('panel-landing'));
   initClimb(document.getElementById('panel-climb'));
