@@ -301,7 +301,19 @@ function renderEnvelopeChart(r, wb) {
   const ptColor = r.withinAny ? '#22c55e' : '#ef4444';
 
   svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${ptColor}" stroke="white" stroke-width="1.5"/>`;
-  svg += `<text x="${px.toFixed(1)}" y="${(py - 10).toFixed(1)}" text-anchor="middle" class="wb-chart__point-label" fill="${ptColor}">${formatNumber(r.totalWeight, 1)} ${wu}</text>`;
+
+  // Position label: above the point by default, below if near top edge
+  const labelGap = 12;
+  const labelAbove = py - pad.top > 25;
+  const ly = labelAbove ? py - labelGap : py + labelGap + 10;
+
+  // Horizontal anchor: shift if near left/right edges
+  const leftSpace = px - pad.left;
+  const rightSpace = (pad.left + plotW) - px;
+  const anchor = leftSpace < 40 ? 'start' : rightSpace < 40 ? 'end' : 'middle';
+
+  const labelText = `${formatNumber(r.totalWeight, 1)} ${wu}`;
+  svg += `<text x="${px.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" class="wb-chart__point-label" fill="${ptColor}">${labelText}</text>`;
 
   svg += `<rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}" fill="none" stroke="#94a3b8" stroke-width="0.5"/>`;
 
