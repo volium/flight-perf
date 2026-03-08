@@ -196,11 +196,23 @@ function renderResults(el, r) {
     </li>`;
 
   if (r.fuelFlow) {
+    const fuelLabel = r.fuelFlow.densityCorrected
+      ? 'Fuel Flow (altitude adjusted)'
+      : 'Fuel Flow';
+
     html += `
       <li class="results-list__item results-list__item--separator">
-        <span class="results-list__label">Fuel Flow</span>
+        <span class="results-list__label">${fuelLabel}</span>
         <span class="results-list__value">${r.fuelFlow.lph} L/hr (${r.fuelFlow.gph} GPH)</span>
       </li>`;
+
+    if (r.fuelFlow.densityCorrected) {
+      html += `
+        <li class="results-list__item">
+          <span class="results-list__label">POH Reference Flow</span>
+          <span class="results-list__value results-list__adjusted">${r.fuelFlow.refLph} L/hr (${r.fuelFlow.refGph} GPH)</span>
+        </li>`;
+    }
   }
 
   if (r.endurance) {

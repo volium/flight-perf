@@ -1,5 +1,5 @@
 import { interpolate2D, interpolateFromTable } from '../engine/interpolation.js';
-import { pressureAltitude } from './density-altitude.js';
+import { pressureAltitude, densityAltitude, densityRatio, isaTemperature } from './density-altitude.js';
 import { convert } from '../engine/units.js';
 
 /**
@@ -34,14 +34,33 @@ export function calculateCruise(profile, inputs) {
     cruise.data, 'pressureAltitude', 'rpm', 'ktas', pa, rpm,
   );
 
-  // Fuel consumption: 1D interpolation by RPM
+  // Fuel consumption: 1D interpolation by RPM, corrected for altitude
   let fuelFlow = null;
+  let fuelDensityCorrected = false;
   if (fuel && fuel.data) {
-    const lph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowLph', rpm);
-    const gph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowGph', rpm);
+    const refLph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowLph', rpm);
+    const refGph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowGph', rpm);
+
+    // Density ratio correction: adjust reference fuel flow for cruise altitude
+    // adjusted_flow = ref_flow × (σ_cruise / σ_reference)
+    const refAlt = fuel.referenceConditions?.altitude?.value ?? 3000;
+    const isaRef = isaTemperature(refAlt);
+    const isaPA = isaTemperature(pa);
+    const daRef = densityAltitude(refAlt, isaRef); // ISA at reference altitude
+    const daCruise = densityAltitude(pa, isaPA);    // ISA at cruise altitude (conservative)
+    const sigmaRef = densityRatio(daRef);
+    const sigmaCruise = densityRatio(daCruise);
+    const correction = sigmaCruise / sigmaRef;
+
+    fuelDensityCorrected = Math.abs(correction - 1.0) > 0.005;
+
     fuelFlow = {
-      lph: Math.round(lph.value * 10) / 10,
-      gph: Math.round(gph.value * 10) / 10,
+      lph: Math.round(refLph.value * correction * 10) / 10,
+      gph: Math.round(refGph.value * correction * 10) / 10,
+      refLph: Math.round(refLph.value * 10) / 10,
+      refGph: Math.round(refGph.value * 10) / 10,
+      densityCorrected: fuelDensityCorrected,
+      correctionFactor: Math.round(correction * 1000) / 1000,
     };
   }
 
