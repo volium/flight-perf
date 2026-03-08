@@ -13,6 +13,9 @@ const DEFAULTS = {
   targetUnit: 'ft',
   altimeter: '29.92',
   altimeterUnit: 'inHg',
+  transitionAltitude: '',
+  transitionUnit: 'ft',
+  cruiseClimbSpeed: '',
 };
 
 export function initClimb(panelEl) {
@@ -87,6 +90,40 @@ export function initClimb(panelEl) {
           </div>
         </div>
 
+        <fieldset class="margin-fieldset">
+          <legend class="margin-fieldset__legend">Cruise Climb</legend>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="cl-transition">Transition Altitude</label>
+              <div class="form-suffix">
+                <input class="form-input" id="cl-transition" type="number" inputmode="numeric"
+                       placeholder="${saved.transitionUnit === 'm' ? 'e.g. 600' : 'e.g. 2000'}" value="${esc(saved.transitionAltitude)}">
+                <span class="form-suffix__label" id="cl-trans-suffix">${saved.transitionUnit}</span>
+              </div>
+              <div class="form-hint">Switch from Vy to cruise climb at this altitude</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cl-trans-unit">Unit</label>
+              <select class="form-input" id="cl-trans-unit">
+                <option value="ft" ${saved.transitionUnit === 'ft' ? 'selected' : ''}>ft</option>
+                <option value="m" ${saved.transitionUnit === 'm' ? 'selected' : ''}>m</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cl-cruise-speed">Cruise Climb Speed</label>
+            <div class="form-suffix">
+              <input class="form-input" id="cl-cruise-speed" type="number" inputmode="numeric"
+                     min="${climb.data ? '' : ''}" step="1"
+                     placeholder="e.g. 85" value="${esc(saved.cruiseClimbSpeed)}">
+              <span class="form-suffix__label">KIAS</span>
+            </div>
+            <div class="form-hint">POH Vy: ${profile.speeds?.vy?.value ?? '—'} KIAS</div>
+          </div>
+        </fieldset>
+
         <button class="btn btn-primary btn-block" id="cl-calculate">Calculate</button>
 
         ${buildRefNote(climb.referenceConditions, climb.description)}
@@ -113,6 +150,10 @@ export function initClimb(panelEl) {
   const altimeterEl = panelEl.querySelector('#cl-altimeter');
   const altUnitEl = panelEl.querySelector('#cl-alt-unit');
   const altSuffix = panelEl.querySelector('#cl-alt-suffix');
+  const transEl = panelEl.querySelector('#cl-transition');
+  const transUnitEl = panelEl.querySelector('#cl-trans-unit');
+  const transSuffix = panelEl.querySelector('#cl-trans-suffix');
+  const cruiseSpeedEl = panelEl.querySelector('#cl-cruise-speed');
   const calcBtn = panelEl.querySelector('#cl-calculate');
   const resultsEl = panelEl.querySelector('#cl-results');
 
@@ -131,6 +172,11 @@ export function initClimb(panelEl) {
     altimeterEl.placeholder = altUnitEl.value === 'hPa' ? '1013.25' : '29.92';
   });
 
+  transUnitEl.addEventListener('change', () => {
+    transSuffix.textContent = transUnitEl.value;
+    transEl.placeholder = transUnitEl.value === 'm' ? 'e.g. 600' : 'e.g. 2000';
+  });
+
   function calculate() {
     const depRaw = parseFloat(depElevEl.value);
     const tgtRaw = parseFloat(targetEl.value);
@@ -145,6 +191,15 @@ export function initClimb(panelEl) {
     const tgtFt = targetUnitEl.value === 'm' ? convert.mToFt(tgtRaw) : tgtRaw;
     const altInHg = altUnitEl.value === 'hPa' ? convert.hPaToInHg(altRaw) : altRaw;
 
+    // Cruise climb (optional)
+    const transRaw = parseFloat(transEl.value);
+    const cruiseSpeed = parseFloat(cruiseSpeedEl.value);
+    let transFt = null;
+
+    if (!isNaN(transRaw)) {
+      transFt = transUnitEl.value === 'm' ? convert.mToFt(transRaw) : transRaw;
+    }
+
     storage.set(STORAGE_KEY, {
       departureElevation: depElevEl.value,
       elevUnit: elevUnitEl.value,
@@ -152,12 +207,17 @@ export function initClimb(panelEl) {
       targetUnit: targetUnitEl.value,
       altimeter: altimeterEl.value,
       altimeterUnit: altUnitEl.value,
+      transitionAltitude: transEl.value,
+      transitionUnit: transUnitEl.value,
+      cruiseClimbSpeed: cruiseSpeedEl.value,
     });
 
     const results = calculateClimbPlan(profile, {
       departureElevation: depFt,
       targetElevation: tgtFt,
       altimeter: altInHg,
+      transitionElevation: transFt,
+      cruiseClimbSpeed: !isNaN(cruiseSpeed) ? cruiseSpeed : null,
     });
 
     if (results.error) {
@@ -233,6 +293,12 @@ function renderResults(el, r) {
       <span class="results-list__value">${formatNumber(r.bestClimbSpeed)} KIAS</span>
     </li>
   </ul>`;
+
+if (r.transitionPa != null && r.cruiseClimbFactor < 1) {
+  const pct = Math.round(r.cruiseClimbFactor * 100);
+  const speedNote = r.cruiseClimbSpeed ? ` at ${r.cruiseClimbSpeed} KIAS` : '';
+  html += `<div class="alert alert--info">ℹ Vy climb below ${formatNumber(r.transitionPa)} ft PA, then cruise climb${speedNote} (≈${pct}% of book ROC) above.</div>`;
+}
 
   // Warnings
   if (r.ceilingReached) {

@@ -53,6 +53,11 @@ export function calculateClimb(profile, inputs) {
  * @param {number} inputs.departureElevation – Departure field elevation in ft
  * @param {number} inputs.targetElevation    – Target altitude in ft (field elevation)
  * @param {number} inputs.altimeter          – Altimeter setting in inHg
+ * @param {number} [inputs.transitionElevation] – Altitude (ft, field elev) to switch
+ *        from Vy climb to cruise climb. If omitted, full Vy climb is assumed.
+ * @param {number} [inputs.cruiseClimbSpeed]     – Cruise climb IAS in knots. Used with
+ *        profile Vy and Vh to compute an ROC reduction factor. If omitted, full Vy
+ *        ROC is used above the transition altitude.
  * @returns {object} Climb plan results
  */
 export function calculateClimbPlan(profile, inputs) {
@@ -66,10 +71,17 @@ export function calculateClimbPlan(profile, inputs) {
   }
 
   const { departureElevation, targetElevation, altimeter } = inputs;
+  const cruiseClimbFactor = deriveCruiseClimbFactor(
+    inputs.cruiseClimbSpeed, profile.speeds,
+  );
 
   const departurePa = Math.round(pressureAltitude(departureElevation, altimeter));
   const targetPa = Math.round(pressureAltitude(targetElevation, altimeter));
   const altitudeToClimb = targetPa - departurePa;
+
+  const transitionPa = inputs.transitionElevation != null
+    ? Math.round(pressureAltitude(inputs.transitionElevation, altimeter))
+    : null;
 
   if (altitudeToClimb <= 0) {
     return { error: 'Target altitude must be higher than departure altitude.' };
@@ -115,24 +127,68 @@ export function calculateClimbPlan(profile, inputs) {
       break;
     }
 
-    totalMinutes += dAlt / rocMid.value;
+    const inCruiseClimb = transitionPa != null && midAlt >= transitionPa;
+    const effectiveRoc = inCruiseClimb ? rocMid.value * cruiseClimbFactor : rocMid.value;
+
+    if (effectiveRoc <= 0) {
+      ceilingReached = true;
+      ceilingAltitude = Math.round(stepBottom);
+      break;
+    }
+
+    totalMinutes += dAlt / effectiveRoc;
   }
 
   const averageRoc = ceilingReached ? null : Math.round(altitudeToClimb / totalMinutes);
+
+  // If target is above transition, show the effective (reduced) ROC at target
+  const targetAboveTransition = transitionPa != null && targetPa >= transitionPa;
+  const effectiveRocAtTarget = ceilingReached
+    ? 0
+    : Math.round(rocTgt.value * (targetAboveTransition ? cruiseClimbFactor : 1));
 
   return {
     departurePa,
     targetPa,
     altitudeToClimb,
     rocAtDeparture: Math.round(rocDep.value),
-    rocAtTarget: ceilingReached ? 0 : Math.round(rocTgt.value),
+    rocAtTarget: effectiveRocAtTarget,
     averageRoc,
     timeToClimb: ceilingReached ? null : Math.round(totalMinutes * 10) / 10,
     bestClimbSpeed: Math.round(bcs.value),
+    transitionPa,
+    cruiseClimbFactor,
+    cruiseClimbSpeed: inputs.cruiseClimbSpeed ?? null,
     extrapolated,
     ceilingReached,
     ceilingAltitude,
     referenceConditions: climb.referenceConditions,
     description: climb.description || '',
   };
+}
+
+/**
+ * Derive a ROC reduction factor from cruise climb speed using the
+ * parabolic excess-power approximation for propeller aircraft:
+ *
+ *   factor = 1 − ((V − Vy) / (Vh − Vy))²
+ *
+ * Returns 1.0 (no reduction) when speed ≤ Vy or speeds are unavailable.
+ *
+ * @param {number|null|undefined} speed – Cruise climb IAS (knots)
+ * @param {object} speeds               – Profile speeds object
+ * @returns {number} Factor in range (0, 1]
+ */
+function deriveCruiseClimbFactor(speed, speeds) {
+  if (speed == null) return 1.0;
+
+  const vy = speeds?.vy?.value;
+  const vh = speeds?.vh?.value;
+  if (!vy || !vh || vh <= vy) return 1.0;
+
+  if (speed <= vy) return 1.0;
+  if (speed >= vh) return 0.01; // effectively zero but avoids division issues
+
+  const ratio = (speed - vy) / (vh - vy);
+  return 1 - ratio * ratio;
 }
