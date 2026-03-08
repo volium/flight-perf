@@ -59,7 +59,7 @@ export function convertValue(value, fromUnit, toUnit, type) {
       else return value;
       return toUnit === 'inHg'
         ? String(Math.round(converted * 100) / 100)
-        : String(Math.round(converted));
+        : String(Math.round(converted * 10) / 10);
 
     case 'temperature':
       if (fromUnit === 'C' && toUnit === 'F') converted = convert.cToF(num);
