@@ -443,7 +443,7 @@ select.form-input {
 
 .xw-diagram__svg {
   width: 100%;
-  max-width: 320px;
+  max-width: 500px;
   height: auto;
 }
 

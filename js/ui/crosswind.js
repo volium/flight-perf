@@ -199,6 +199,26 @@ function svgText(x, y, text, cls, opts = {}) {
   );
 }
 
+/**
+ * Map wind speed to a color from green (calm) through amber to red (strong).
+ * 0 kt → green, ~15 kt → amber, 30+ kt → red.
+ */
+function windSpeedColor(kt) {
+  const t = Math.min(Math.max(kt / 30, 0), 1);
+  if (t < 0.5) {
+    const p = t * 2;
+    const r = Math.round(34 + p * (217 - 34));
+    const g = Math.round(197 + p * (119 - 197));
+    const b = Math.round(94 + p * (6 - 94));
+    return `rgb(${r},${g},${b})`;
+  }
+  const p = (t - 0.5) * 2;
+  const r = Math.round(217 + p * (220 - 217));
+  const g = Math.round(119 + p * (38 - 119));
+  const b = Math.round(6 + p * (38 - 6));
+  return `rgb(${r},${g},${b})`;
+}
+
 /* ── SVG Diagram ── */
 
 /**
@@ -211,12 +231,13 @@ function compassXY(cx, cy, deg, r) {
 }
 
 function renderDiagram(r) {
-  const W = 300, H = 300;
+  const W = 480, H = 480;
   const cx = W / 2, cy = H / 2;
-  const compassR = 118;
-  const rwyHalf = 80;
-  const rwyW = 30;
-  const labelR = 98;
+  const compassR = 200;
+  const compassStroke = 1.5;
+  const rwyW = 24;
+  const labelR = compassR - 22;
+  const rwyHalf = labelR - 16;
 
   const hdg = r.runwayHeading;
   const recipHdg = r.reciprocalHeading;
@@ -234,16 +255,16 @@ function renderDiagram(r) {
   );
 
   p.push(`<defs><style>
-    .xd-rwy   { font: 700 13px -apple-system, system-ui, sans-serif; fill: white; }
+    .xd-rwy   { font: 700 12px -apple-system, system-ui, sans-serif; fill: white; }
     .xd-comp  { font: 600 10px -apple-system, system-ui, sans-serif; fill: #64748b; }
     .xd-comp-c { font: 700 11px -apple-system, system-ui, sans-serif; fill: #475569; }
-    .xd-wind  { font: 600 10px -apple-system, system-ui, sans-serif; fill: #1e40af; }
+    .xd-wind  { font: 600 10px -apple-system, system-ui, sans-serif; }
   </style></defs>`);
 
   // ── Compass rose ──
   p.push(
     `<circle cx="${cx}" cy="${cy}" r="${compassR}" ` +
-    `fill="none" stroke="#cbd5e1" stroke-width="1.5"/>`,
+    `fill="none" stroke="#cbd5e1" stroke-width="${compassStroke}"/>`,
   );
 
   // Tick marks every 5°
@@ -300,51 +321,68 @@ function renderDiagram(r) {
     `x2="${cx + rwyW / 2}" y2="${cy + rwyHalf}" stroke="#9ca3af" stroke-width="0.5"/>`,
   );
 
-  // Centerline dashes (between the threshold zones)
-  for (let yy = cy - rwyHalf + 28; yy < cy + rwyHalf - 27; yy += 12) {
-    const de = Math.min(yy + 6, cy + rwyHalf - 28);
-    p.push(
-      `<line x1="${cx}" y1="${rd(yy)}" x2="${cx}" y2="${rd(de)}" ` +
-      `stroke="white" stroke-width="1" opacity="0.4"/>`,
-    );
-  }
-
-  // Threshold stripes — longitudinal bars like real pavement markings
-  const stripeCount = 4;
-  const stripeSpan = rwyW - 8;
-  const stripeGap = stripeSpan / (stripeCount - 1);
-
-  // Top threshold (reciprocal approach end, pre-rotation)
-  for (let i = 0; i < stripeCount; i++) {
-    const x = cx - stripeSpan / 2 + i * stripeGap;
-    p.push(
-      `<line x1="${rd(x)}" y1="${rd(cy - rwyHalf + 4)}" ` +
-      `x2="${rd(x)}" y2="${rd(cy - rwyHalf + 18)}" ` +
-      `stroke="white" stroke-width="2" opacity="0.85"/>`,
-    );
-  }
-
-  // Bottom threshold (selected runway approach end, pre-rotation)
-  for (let i = 0; i < stripeCount; i++) {
-    const x = cx - stripeSpan / 2 + i * stripeGap;
-    p.push(
-      `<line x1="${rd(x)}" y1="${rd(cy + rwyHalf - 4)}" ` +
-      `x2="${rd(x)}" y2="${rd(cy + rwyHalf - 18)}" ` +
-      `stroke="white" stroke-width="2" opacity="0.85"/>`,
-    );
-  }
-
-  // Selected runway number — near bottom (approach end), upright in pre-rotation
+  // Centerline dashes — compute dasharray so full stripes fit between numbers
+  const clStart = cy - rwyHalf + 28;
+  const clEnd = cy + rwyHalf - 28;
+  const clLen = clEnd - clStart;
+  const targetDash = 7;
+  const numDashes = Math.round(clLen / (targetDash * 2));
+  const dash = clLen / (numDashes * 2 - 1);
   p.push(
-    `<text x="${cx}" y="${rd(cy + rwyHalf - 28)}" text-anchor="middle" ` +
+    `<line x1="${cx}" y1="${rd(clStart)}" x2="${cx}" y2="${rd(clEnd)}" ` +
+    `stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="${rd(dash)},${rd(dash)}"/>`,
+  );
+
+  // ── Runway markings (applied identically to each end) ──
+  // Stripe x-offsets: 8 longitudinal bars symmetric about centerline
+  const thStripes = [-9, -5.4, -1.8, 1.8, 5.4, 9];
+  const thLen = 12; // stripe length
+
+  for (const sign of [1, -1]) {
+    // sign=1 → bottom (selected), sign=-1 → top (reciprocal)
+    const edgeY = cy + sign * rwyHalf;
+    const inward = -sign; // direction from edge toward center
+
+    // Threshold line — solid bar across full width
+    p.push(
+      `<line x1="${rd(cx - rwyW / 2 + 1)}" y1="${rd(edgeY + inward * 2)}" ` +
+      `x2="${rd(cx + rwyW / 2 - 1)}" y2="${rd(edgeY + inward * 2)}" ` +
+      `stroke="white" stroke-width="1" opacity="0.9"/>`,
+    );
+
+    // Threshold stripes — longitudinal bars
+    for (const dx of thStripes) {
+      p.push(
+        `<line x1="${rd(cx + dx)}" y1="${rd(edgeY + inward * 5)}" ` +
+        `x2="${rd(cx + dx)}" y2="${rd(edgeY + inward * (5 + thLen))}" ` +
+        `stroke="white" stroke-width="1.2" opacity="0.85"/>`,
+      );
+    }
+
+    // Aiming point markers — two bold bars flanking the centerline
+    const aimY = edgeY + inward * 42;
+    const aimH = 16;
+    p.push(
+      `<rect x="${rd(cx - 8.5)}" y="${rd(aimY - aimH / 2)}" ` +
+      `width="3" height="${aimH}" fill="white" opacity="0.75"/>`,
+    );
+    p.push(
+      `<rect x="${rd(cx + 5.5)}" y="${rd(aimY - aimH / 2)}" ` +
+      `width="3" height="${aimH}" fill="white" opacity="0.75"/>`,
+    );
+  }
+
+  // Selected runway number — near bottom (approach end), upright
+  p.push(
+    `<text x="${cx}" y="${rd(cy + rwyHalf - 27)}" text-anchor="middle" ` +
     `dominant-baseline="central" class="xd-rwy">${rwyNum}</text>`,
   );
 
-  // Reciprocal number — near top (other approach end), rotated 180° in pre-rotation
+  // Reciprocal number — near top (other approach end), rotated 180°
   p.push(
-    `<text x="${cx}" y="${rd(cy - rwyHalf + 28)}" text-anchor="middle" ` +
+    `<text x="${cx}" y="${rd(cy - rwyHalf + 27)}" text-anchor="middle" ` +
     `dominant-baseline="central" class="xd-rwy" ` +
-    `transform="rotate(180, ${cx}, ${rd(cy - rwyHalf + 28)})">${recipNum}</text>`,
+    `transform="rotate(180, ${cx}, ${rd(cy - rwyHalf + 26)})">${recipNum}</text>`,
   );
 
   p.push('</g>');
@@ -352,8 +390,8 @@ function renderDiagram(r) {
   // ── Wind arrow ──
   if (windKt > 0.5) {
     const windRad = degToRad(windDir);
-    const windSX = cx + compassR * Math.sin(windRad);
-    const windSY = cy - compassR * Math.cos(windRad);
+    const windSX = cx + (compassR - 2 * compassStroke) * Math.sin(windRad);
+    const windSY = cy - (compassR - 2 * compassStroke) * Math.cos(windRad);
 
     // Stop the arrowhead 15px from center so it doesn't crowd the runway
     const stopR = 15;
@@ -362,18 +400,34 @@ function renderDiagram(r) {
     const endX = cx + (stopR / wdLen) * wdx;
     const endY = cy + (stopR / wdLen) * wdy;
 
-    p.push(svgArrow(windSX, windSY, endX, endY, '#1e40af', 3, 9));
+    const windColor = windSpeedColor(windKt);
+    p.push(svgArrow(windSX, windSY, endX, endY, windColor, 4.5, 12));
 
-    // Wind label just outside the compass circle
-    const wlR = compassR + 14;
-    let wlX = cx + wlR * Math.sin(windRad);
-    let wlY = cy - wlR * Math.cos(windRad);
-    wlX = Math.max(24, Math.min(W - 24, wlX));
-    wlY = Math.max(10, Math.min(H - 6, wlY));
+    // Wind label — at arrow midpoint, on whichever side is further from the runway
+    const wlR = compassR * 0.5;
+    const baseX = cx + wlR * Math.sin(windRad);
+    const baseY = cy - wlR * Math.cos(windRad);
+    const pxDir = Math.cos(windRad), pyDir = Math.sin(windRad);
+    const wlOff = 20;
+
+    // Two candidate positions (perpendicular to arrow, both sides)
+    const aX = baseX + pxDir * wlOff, aY = baseY + pyDir * wlOff;
+    const bX = baseX - pxDir * wlOff, bY = baseY - pyDir * wlOff;
+
+    // Pick the one further from the runway centerline
+    const hRad = degToRad(hdg);
+    const distA = Math.abs((aX - cx) * Math.cos(hRad) + (aY - cy) * Math.sin(hRad));
+    const distB = Math.abs((bX - cx) * Math.cos(hRad) + (bY - cy) * Math.sin(hRad));
+    const useA = distA >= distB;
+    let wlX = useA ? aX : bX;
+    let wlY = useA ? aY : bY;
+
+    // Text-anchor: extend text away from the arrow, not back across it
+    const chosenPerpX = useA ? pxDir : -pxDir;
     let wlAnchor = 'middle';
-    if (wlX > cx + 30) wlAnchor = 'start';
-    else if (wlX < cx - 30) wlAnchor = 'end';
-    p.push(svgText(wlX, wlY, `${windDir}°/${Math.round(windKt)} kt`, 'xd-wind', { anchor: wlAnchor }));
+    if (chosenPerpX > 0.3) wlAnchor = 'start';
+    else if (chosenPerpX < -0.3) wlAnchor = 'end';
+    p.push(svgText(wlX, wlY, `${windDir}°/${Math.round(windKt)} kt`, 'xd-wind', { anchor: wlAnchor, fill: windColor }));
   }
 
   p.push('</svg>');
