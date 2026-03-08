@@ -67,8 +67,8 @@ export function calculateClimbPlan(profile, inputs) {
 
   const { departureElevation, targetElevation, altimeter } = inputs;
 
-  const departurePa = pressureAltitude(departureElevation, altimeter);
-  const targetPa = pressureAltitude(targetElevation, altimeter);
+  const departurePa = Math.round(pressureAltitude(departureElevation, altimeter));
+  const targetPa = Math.round(pressureAltitude(targetElevation, altimeter));
   const altitudeToClimb = targetPa - departurePa;
 
   if (altitudeToClimb <= 0) {
@@ -121,9 +121,9 @@ export function calculateClimbPlan(profile, inputs) {
   const averageRoc = ceilingReached ? null : Math.round(altitudeToClimb / totalMinutes);
 
   return {
-    departurePa: Math.round(departurePa),
-    targetPa: Math.round(targetPa),
-    altitudeToClimb: Math.round(altitudeToClimb),
+    departurePa,
+    targetPa,
+    altitudeToClimb,
     rocAtDeparture: Math.round(rocDep.value),
     rocAtTarget: ceilingReached ? 0 : Math.round(rocTgt.value),
     averageRoc,
