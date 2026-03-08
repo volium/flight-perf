@@ -219,7 +219,7 @@ function renderResults(el, r) {
     const durStr = `${r.endurance.hours}h ${String(r.endurance.minutes).padStart(2, '0')}m`;
     html += `
       <li class="results-list__item">
-        <span class="results-list__label">Endurance (full fuel)</span>
+        <span class="results-list__label">Endurance (usable fuel)</span>
         <span class="results-list__value">${durStr}</span>
       </li>`;
   }
@@ -227,7 +227,7 @@ function renderResults(el, r) {
   if (r.range != null) {
     html += `
       <li class="results-list__item">
-        <span class="results-list__label">Range (full fuel, no reserve)</span>
+        <span class="results-list__label">Range (usable fuel, no reserve)</span>
         <span class="results-list__value">${formatNumber(r.range)} NM</span>
       </li>`;
   }

@@ -31,7 +31,8 @@
   "fuel": {
     "type": "100LL",
     "inputUnit": "us_gal",
-    "capacity": { "value": 150, "unit": "L", "valueUSGal": 39.6 },
+    "capacity":     { "value": 150, "unit": "L", "valueUSGal": 39.6 },
+    "usableCapacity": { "value": 146, "unit": "L", "valueUSGal": 38.6 },
     "tanks": [
       { "name": "Left Wing",  "capacity": { "value": 75, "unit": "L" } },
       { "name": "Right Wing", "capacity": { "value": 75, "unit": "L" } }

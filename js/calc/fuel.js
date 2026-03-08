@@ -74,19 +74,24 @@ export function calculateFuelPlan(profile, inputs) {
   const totalRequiredL = tripFuelL + reserveFuelL;
   const totalRequiredGal = tripFuelGal + reserveFuelGal;
 
-  // Fuel on board in litres
+  // Fuel on board in litres (total in tanks)
   const fobL = fuelToLitres(fuelOnBoard, fuelConfig);
   const fobGal = fobL * 0.264172;
 
-  // Fuel remaining after trip
-  const remainingL = fobL - tripFuelL;
-  const remainingGal = fobGal - tripFuelGal;
+  // Unusable fuel
+  const unusableL = getUnusableFuelL(fuelConfig);
+  const usableFobL = Math.max(0, fobL - unusableL);
+  const usableFobGal = usableFobL * 0.264172;
 
-  // Endurance with fuel on board
-  const enduranceHrs = flowLph > 0 ? fobL / flowLph : 0;
+  // Fuel remaining after trip (based on usable fuel)
+  const remainingL = usableFobL - tripFuelL;
+  const remainingGal = usableFobGal - tripFuelGal;
+
+  // Endurance with usable fuel on board
+  const enduranceHrs = flowLph > 0 ? usableFobL / flowLph : 0;
   const enduranceAfterTripHrs = flowLph > 0 ? Math.max(0, remainingL) / flowLph : 0;
 
-  // Range with fuel on board
+  // Range with usable fuel on board
   const rangeNm = tasKt > 0 ? tasKt * enduranceHrs : 0;
 
   const sufficient = remainingL >= reserveFuelL;
@@ -116,6 +121,9 @@ export function calculateFuelPlan(profile, inputs) {
 
     fobL: Math.round(fobL * 10) / 10,
     fobGal: Math.round(fobGal * 10) / 10,
+    unusableL: Math.round(unusableL * 10) / 10,
+    usableFobL: Math.round(usableFobL * 10) / 10,
+    usableFobGal: Math.round(usableFobGal * 10) / 10,
 
     remainingL: Math.round(remainingL * 10) / 10,
     remainingGal: Math.round(remainingGal * 10) / 10,
@@ -147,4 +155,15 @@ function fuelToLitres(quantity, fuelConfig) {
     default:
       return quantity;
   }
+}
+
+function getUnusableFuelL(fuelConfig) {
+  if (!fuelConfig?.capacity || !fuelConfig?.usableCapacity) return 0;
+  const totalL = fuelConfig.capacity.unit === 'L'
+    ? fuelConfig.capacity.value
+    : fuelConfig.capacity.value * 3.785411784;
+  const usableL = fuelConfig.usableCapacity.unit === 'L'
+    ? fuelConfig.usableCapacity.value
+    : fuelConfig.usableCapacity.value * 3.785411784;
+  return Math.max(0, totalL - usableL);
 }

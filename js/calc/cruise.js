@@ -64,18 +64,18 @@ export function calculateCruise(profile, inputs) {
     };
   }
 
-  // Endurance & range (recalculated from fuel on board if provided, else from profile ref)
+  // Endurance & range based on usable fuel
   let endurance = null;
   let range = null;
-  const fuelCapacity = profile?.fuel?.capacity;
+  const usableCap = profile?.fuel?.usableCapacity || profile?.fuel?.capacity;
 
-  if (fuelFlow && fuelCapacity) {
-    const totalLitres = fuelCapacity.unit === 'L'
-      ? fuelCapacity.value
-      : convert.usGalToL(fuelCapacity.value);
+  if (fuelFlow && usableCap) {
+    const usableLitres = usableCap.unit === 'L'
+      ? usableCap.value
+      : convert.usGalToL(usableCap.value);
 
     if (fuelFlow.lph > 0) {
-      const hours = totalLitres / fuelFlow.lph;
+      const hours = usableLitres / fuelFlow.lph;
       endurance = { hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60) };
 
       if (ktas.value > 0) {

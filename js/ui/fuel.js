@@ -241,7 +241,11 @@ function renderResults(el, r) {
   html += resultRow('Total Required', `${r.totalRequiredL} L (${r.totalRequiredGal} gal)`, true);
 
   // Fuel on board
-  html += separatorRow('Fuel On Board', `${r.fobL} L (${r.fobGal.toFixed(1)} gal)`);
+  html += separatorRow('Fuel On Board (total)', `${r.fobL} L (${r.fobGal.toFixed(1)} gal)`);
+  if (r.unusableL > 0) {
+    html += resultRow('Unusable Fuel', `${r.unusableL} L`);
+    html += resultRow('Usable Fuel', `${r.usableFobL} L (${r.usableFobGal.toFixed(1)} gal)`);
+  }
   html += resultRow('Remaining After Trip',
     `${r.remainingL} L (${r.remainingGal.toFixed(1)} gal)`,
     false, remainClass);
