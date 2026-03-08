@@ -1,4 +1,4 @@
-import { calculateTakeoff } from '../calc/takeoff.js';
+import { calculateLanding } from '../calc/landing.js';
 import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import {
@@ -8,7 +8,7 @@ import {
   buildRefNote,
 } from './perf-ui-common.js';
 
-const STORAGE_KEY = 'takeoff_inputs';
+const STORAGE_KEY = 'landing_inputs';
 
 const DEFAULTS = {
   surface: '',
@@ -19,58 +19,58 @@ const DEFAULTS = {
   distanceUnit: 'ft',
 };
 
-export function initTakeoff(panelEl) {
+export function initLanding(panelEl) {
   const profile = getProfile();
   const saved = storage.get(STORAGE_KEY, DEFAULTS);
-  const takeoff = profile?.performance?.takeoff;
+  const landing = profile?.performance?.landing;
 
-  if (!takeoff) {
+  if (!landing) {
     panelEl.innerHTML = `
       <div class="panel">
-        <div class="alert alert--warning">⚠ No takeoff performance data available in the loaded profile.</div>
+        <div class="alert alert--warning">⚠ No landing performance data available in the loaded profile.</div>
       </div>`;
     return;
   }
 
-  const surfaceOptions = takeoff.data
+  const surfaceOptions = landing.data
     .map(
       (d) =>
         `<option value="${d.surface}" ${saved.surface === d.surface ? 'selected' : ''}>${d.surfaceLabel}</option>`,
     )
     .join('');
 
-  const refNote = buildRefNote(takeoff.referenceConditions, takeoff.description);
+  const refNote = buildRefNote(landing.referenceConditions, landing.description);
 
   panelEl.innerHTML = `
     <div class="tab-panel__layout">
       <div class="panel">
-        <h2 class="panel__title">Takeoff Performance</h2>
+        <h2 class="panel__title">Landing Performance</h2>
 
         <div class="form-group">
-          <label class="form-label" for="to-surface">Runway Surface</label>
-          <select class="form-input" id="to-surface">${surfaceOptions}</select>
+          <label class="form-label" for="ld-surface">Runway Surface</label>
+          <select class="form-input" id="ld-surface">${surfaceOptions}</select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="to-unit">Distance Unit</label>
-          <select class="form-input" id="to-unit">
+          <label class="form-label" for="ld-unit">Distance Unit</label>
+          <select class="form-input" id="ld-unit">
             <option value="ft" ${saved.distanceUnit === 'ft' ? 'selected' : ''}>ft</option>
             <option value="m" ${saved.distanceUnit === 'm' ? 'selected' : ''}>m</option>
           </select>
         </div>
 
-        ${marginFieldsetHTML('to', saved)}
+        ${marginFieldsetHTML('ld', saved)}
 
-        <button class="btn btn-primary btn-block" id="to-calculate">Calculate</button>
+        <button class="btn btn-primary btn-block" id="ld-calculate">Calculate</button>
 
         ${refNote}
       </div>
 
       <div class="panel">
         <h2 class="panel__title">Results</h2>
-        <div id="to-results">
+        <div id="ld-results">
           <div class="placeholder-message">
-            <div class="placeholder-message__icon">🛫</div>
+            <div class="placeholder-message__icon">🛬</div>
             <div class="placeholder-message__text">Select surface and press Calculate</div>
           </div>
         </div>
@@ -78,12 +78,12 @@ export function initTakeoff(panelEl) {
     </div>
   `;
 
-  const surfaceEl = panelEl.querySelector('#to-surface');
-  const unitEl = panelEl.querySelector('#to-unit');
-  const calcBtn = panelEl.querySelector('#to-calculate');
-  const resultsEl = panelEl.querySelector('#to-results');
+  const surfaceEl = panelEl.querySelector('#ld-surface');
+  const unitEl = panelEl.querySelector('#ld-unit');
+  const calcBtn = panelEl.querySelector('#ld-calculate');
+  const resultsEl = panelEl.querySelector('#ld-results');
 
-  const marginCtrl = initMarginFieldset(panelEl, 'to', saved, () => unitEl.value);
+  const marginCtrl = initMarginFieldset(panelEl, 'ld', saved, () => unitEl.value);
   unitEl.addEventListener('change', () => marginCtrl.updateUI());
 
   function calculate() {
@@ -99,7 +99,7 @@ export function initTakeoff(panelEl) {
       ...marginCtrl.saveState(),
     });
 
-    const results = calculateTakeoff(profile, {
+    const results = calculateLanding(profile, {
       surface,
       margins: marginCtrl.buildMargins(),
       distanceUnit: unitEl.value,

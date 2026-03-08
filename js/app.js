@@ -3,6 +3,7 @@ import { initSettings } from './ui/settings.js';
 import { initDensityAltitude } from './ui/density-altitude.js';
 import { initCrosswind } from './ui/crosswind.js';
 import { initTakeoff } from './ui/takeoff.js';
+import { initLanding } from './ui/landing.js';
 import { loadProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
 
@@ -44,6 +45,7 @@ async function init() {
 
 function initCalculators() {
   initTakeoff(document.getElementById('panel-takeoff'));
+  initLanding(document.getElementById('panel-landing'));
   initDensityAltitude(document.getElementById('panel-density'));
   initCrosswind(document.getElementById('panel-crosswind'));
 }
