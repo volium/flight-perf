@@ -47,6 +47,7 @@ export function initWeightBalance(panelEl) {
   }
 
   const maxFuel = fuelConfig?.capacity;
+  const maxFuelInInputUnit = getMaxFuelInInputUnit(fuelConfig);
   const maxFuelNote = maxFuel
     ? `<div class="form-hint">Capacity: ${maxFuel.value} ${maxFuel.unit}${maxFuel.valueUSGal ? ` (${maxFuel.valueUSGal} US gal)` : ''}</div>`
     : '';
@@ -64,7 +65,7 @@ export function initWeightBalance(panelEl) {
           <label class="form-label" for="wb-fuel">Fuel</label>
           <div class="form-suffix">
             <input class="form-input" id="wb-fuel" type="number" inputmode="decimal"
-                   min="0" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
+                   min="0" max="${maxFuelInInputUnit}" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
             <span class="form-suffix__label">${fuelLabel}</span>
           </div>
           ${maxFuelNote}
@@ -88,6 +89,13 @@ export function initWeightBalance(panelEl) {
   const fuelEl = panelEl.querySelector('#wb-fuel');
   const calcBtn = panelEl.querySelector('#wb-calculate');
   const resultsEl = panelEl.querySelector('#wb-results');
+
+  fuelEl.addEventListener('change', () => {
+    const val = parseFloat(fuelEl.value);
+    if (!isNaN(val) && val > maxFuelInInputUnit) {
+      fuelEl.value = maxFuelInInputUnit;
+    }
+  });
 
   function calculate() {
     const stationWeights = {};
@@ -289,4 +297,16 @@ function fuelUnitLabel(unit) {
     case 'lbs': return 'lbs';
     default: return unit;
   }
+}
+
+function getMaxFuelInInputUnit(fuelConfig) {
+  if (!fuelConfig?.capacity) return '';
+  const cap = fuelConfig.capacity;
+  const inputUnit = fuelConfig.inputUnit || 'L';
+
+  if (inputUnit === cap.unit) return cap.value;
+  if (inputUnit === 'us_gal' && cap.valueUSGal) return cap.valueUSGal;
+  if (inputUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
+  if (inputUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
+  return cap.value;
 }

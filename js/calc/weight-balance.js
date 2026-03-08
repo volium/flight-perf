@@ -51,7 +51,7 @@ export function calculateWeightBalance(profile, inputs) {
       arm,
       moment,
       maxWeight: station.maxWeight?.value ?? null,
-      overweight: station.maxWeight ? weight > station.maxWeight.value : false,
+      overweight: station.maxWeight && !station.fuelStation ? weight > station.maxWeight.value : false,
     });
   }
 
