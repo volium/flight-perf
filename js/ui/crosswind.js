@@ -321,18 +321,8 @@ function renderDiagram(r) {
     `x2="${cx + rwyW / 2}" y2="${cy + rwyHalf}" stroke="#9ca3af" stroke-width="0.5"/>`,
   );
 
-  // Centerline dashes — compute dasharray so full stripes fit between numbers
+  // Centerline dashes — computed outside the rotated group for consistency
   const rwyNumInset = 27;
-  const clStart = cy - rwyHalf + rwyNumInset + 8;
-  const clEnd = cy + rwyHalf - rwyNumInset - 8;
-  const clLen = clEnd - clStart;
-  const targetDash = 7;
-  const numDashes = Math.round(clLen / (targetDash * 2));
-  const dash = clLen / (numDashes * 2 - 1);
-  p.push(
-    `<line x1="${cx}" y1="${rd(clStart)}" x2="${cx}" y2="${rd(clEnd)}" ` +
-    `stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="${rd(dash)},${rd(dash)}"/>`,
-  );
 
   // ── Runway markings (applied identically to each end) ──
   // Stripe x-offsets: 8 longitudinal bars symmetric about centerline
@@ -363,30 +353,62 @@ function renderDiagram(r) {
     // Aiming point markers — two bold bars flanking the centerline
     const aimY = edgeY + inward * 42;
     const aimH = 16;
+    const aimBarW = 3;
+    const aimGap = 1.5;
     p.push(
-      `<rect x="${rd(cx - 8.5)}" y="${rd(aimY - aimH / 2)}" ` +
-      `width="3" height="${aimH}" fill="white" opacity="0.75"/>`,
+      `<rect x="${rd(cx - aimGap - aimBarW)}" y="${rd(aimY - aimH / 2)}" ` +
+      `width="${aimBarW}" height="${aimH}" fill="white" opacity="0.75"/>`,
     );
     p.push(
-      `<rect x="${rd(cx + 5.5)}" y="${rd(aimY - aimH / 2)}" ` +
-      `width="3" height="${aimH}" fill="white" opacity="0.75"/>`,
+      `<rect x="${rd(cx + aimGap)}" y="${rd(aimY - aimH / 2)}" ` +
+      `width="${aimBarW}" height="${aimH}" fill="white" opacity="0.75"/>`,
     );
   }
 
-  // Selected runway number — near bottom (approach end), upright
-  p.push(
-    `<text x="${cx}" y="${rd(cy + rwyHalf - 27)}" text-anchor="middle" ` +
-    `dominant-baseline="central" class="xd-rwy">${rwyNum}</text>`,
-  );
-
-  // Reciprocal number — near top (other approach end), rotated 180°
-  p.push(
-    `<text x="${cx}" y="${rd(cy - rwyHalf + 27)}" text-anchor="middle" ` +
-    `dominant-baseline="central" class="xd-rwy" ` +
-    `transform="rotate(180, ${cx}, ${rd(cy - rwyHalf + 26)})">${recipNum}</text>`,
-  );
-
   p.push('</g>');
+
+  // ── Centerline (outside rotated group for consistent dash rendering) ──
+  const hdgRad = degToRad(hdg);
+  const clR = rwyHalf - rwyNumInset - 8;
+  const clLen = clR * 2;
+  const targetDash = 7;
+  const numDashes = Math.round(clLen / (targetDash * 2));
+  const dash = clLen / (numDashes * 2 - 1);
+
+  // Always draw from the visually "upper/left" point for consistent dasharray
+  const cl1x = cx - clR * Math.sin(hdgRad);
+  const cl1y = cy + clR * Math.cos(hdgRad);
+  const cl2x = cx + clR * Math.sin(hdgRad);
+  const cl2y = cy - clR * Math.cos(hdgRad);
+  const clStartX = cl1y < cl2y || (cl1y === cl2y && cl1x <= cl2x) ? cl1x : cl2x;
+  const clStartY = cl1y < cl2y || (cl1y === cl2y && cl1x <= cl2x) ? cl1y : cl2y;
+  const clEndX = clStartX === cl1x ? cl2x : cl1x;
+  const clEndY = clStartY === cl1y ? cl2y : cl1y;
+  p.push(
+    `<line x1="${rd(clStartX)}" y1="${rd(clStartY)}" x2="${rd(clEndX)}" y2="${rd(clEndY)}" ` +
+    `stroke="white" stroke-width="1" opacity="0.4" stroke-dasharray="${rd(dash)},${rd(dash)}"/>`,
+  );
+
+  // ── Runway numbers (outside rotated group — single rotation, no compound transform) ──
+  const numInset = rwyHalf - 25;
+
+  // Selected runway number at approach end (opposite heading direction)
+  const selX = cx - numInset * Math.sin(hdgRad);
+  const selY = cy + numInset * Math.cos(hdgRad);
+  p.push(
+    `<text x="${rd(selX)}" y="${rd(selY)}" text-anchor="middle" ` +
+    `dominant-baseline="central" class="xd-rwy" ` +
+    `transform="rotate(${hdg}, ${rd(selX)}, ${rd(selY)})">${rwyNum}</text>`,
+  );
+
+  // Reciprocal number at heading end
+  const recX = cx + numInset * Math.sin(hdgRad);
+  const recY = cy - numInset * Math.cos(hdgRad);
+  p.push(
+    `<text x="${rd(recX)}" y="${rd(recY)}" text-anchor="middle" ` +
+    `dominant-baseline="central" class="xd-rwy" ` +
+    `transform="rotate(${recipHdg}, ${rd(recX)}, ${rd(recY)})">${recipNum}</text>`,
+  );
 
   // ── Wind arrow ──
   if (windKt > 0.5) {
