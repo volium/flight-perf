@@ -90,3 +90,49 @@ export function interpolateFromTable(data, variableKey, resultKey, variableValue
 
   return interpolate1D(xs, ys, variableValue, opts);
 }
+
+/**
+ * 2D bilinear interpolation from a flat table of data points
+ * using two independent variables.
+ *
+ * The data is a flat array where each row has both independent variables
+ * and the result. This function groups by the first variable, interpolates
+ * along the second variable within each group, then interpolates the
+ * intermediate results along the first variable.
+ *
+ * @param {object[]} data  – Flat array of data point objects
+ * @param {string} var1Key – Key for the first independent variable (outer, e.g., "pressureAltitude")
+ * @param {string} var2Key – Key for the second independent variable (inner, e.g., "rpm")
+ * @param {string} resultKey – Key for the dependent variable (e.g., "ktas")
+ * @param {number} var1Value – Value for the first variable
+ * @param {number} var2Value – Value for the second variable
+ * @param {function} [getVal] – Optional accessor for nested values
+ * @param {object}   [opts]   – Options passed through to interpolate1D
+ * @returns {{ value: number, clamped: boolean, clampedTo: string|null, extrapolated: boolean }}
+ */
+export function interpolate2D(data, var1Key, var2Key, resultKey, var1Value, var2Value, getVal, opts) {
+  const accessor = getVal || ((obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj);
+
+  // Get unique sorted values for var1
+  const var1Set = [...new Set(data.map((d) => accessor(d[var1Key])))].sort((a, b) => a - b);
+
+  // For each var1 level, interpolate along var2 to get the result at var2Value
+  const intermediateXs = [];
+  const intermediateYs = [];
+
+  for (const v1 of var1Set) {
+    const subset = data.filter((d) => accessor(d[var1Key]) === v1);
+    const xs = subset.map((d) => accessor(d[var2Key])).sort((a, b) => a - b);
+    const ys = xs.map((x) => {
+      const row = subset.find((d) => accessor(d[var2Key]) === x);
+      return accessor(row[resultKey]);
+    });
+
+    const interp = interpolate1D(xs, ys, var2Value, opts);
+    intermediateXs.push(v1);
+    intermediateYs.push(interp.value);
+  }
+
+  // Now interpolate the intermediate results along var1
+  return interpolate1D(intermediateXs, intermediateYs, var1Value, opts);
+}

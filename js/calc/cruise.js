@@ -1,0 +1,88 @@
+import { interpolate2D, interpolateFromTable } from '../engine/interpolation.js';
+import { pressureAltitude } from './density-altitude.js';
+import { convert } from '../engine/units.js';
+
+/**
+ * Perform cruise performance calculation from profile data.
+ *
+ * Interpolates cruise speed (KIAS, KTAS) from the 2D altitude × RPM table,
+ * and looks up fuel consumption from the 1D RPM table.
+ *
+ * @param {object} profile – Full aircraft profile
+ * @param {object} inputs
+ * @param {number} inputs.fieldElevation – Field elevation in ft
+ * @param {number} inputs.altimeter      – Altimeter setting in inHg
+ * @param {number} inputs.rpm            – Engine RPM
+ * @returns {object} Calculation results
+ */
+export function calculateCruise(profile, inputs) {
+  const cruise = profile?.performance?.cruise;
+  if (!cruise) {
+    return { error: 'No cruise performance data in this profile.' };
+  }
+
+  const fuel = profile?.performance?.fuelConsumption;
+  const { fieldElevation, altimeter, rpm } = inputs;
+
+  const pa = Math.round(pressureAltitude(fieldElevation, altimeter));
+
+  // 2D interpolation: altitude × RPM → KIAS, KTAS
+  const kias = interpolate2D(
+    cruise.data, 'pressureAltitude', 'rpm', 'kias', pa, rpm,
+  );
+  const ktas = interpolate2D(
+    cruise.data, 'pressureAltitude', 'rpm', 'ktas', pa, rpm,
+  );
+
+  // Fuel consumption: 1D interpolation by RPM
+  let fuelFlow = null;
+  if (fuel && fuel.data) {
+    const lph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowLph', rpm);
+    const gph = interpolateFromTable(fuel.data, 'rpm', 'fuelFlowGph', rpm);
+    fuelFlow = {
+      lph: Math.round(lph.value * 10) / 10,
+      gph: Math.round(gph.value * 10) / 10,
+    };
+  }
+
+  // Endurance & range (recalculated from fuel on board if provided, else from profile ref)
+  let endurance = null;
+  let range = null;
+  const fuelCapacity = profile?.fuel?.capacity;
+
+  if (fuelFlow && fuelCapacity) {
+    const totalLitres = fuelCapacity.unit === 'L'
+      ? fuelCapacity.value
+      : convert.usGalToL(fuelCapacity.value);
+
+    if (fuelFlow.lph > 0) {
+      const hours = totalLitres / fuelFlow.lph;
+      endurance = { hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60) };
+
+      if (ktas.value > 0) {
+        range = Math.round(ktas.value * hours);
+      }
+    }
+  }
+
+  // RPM range from data
+  const rpmValues = [...new Set(cruise.data.map((d) => d.rpm))].sort((a, b) => a - b);
+  const altValues = [...new Set(cruise.data.map((d) =>
+    typeof d.pressureAltitude === 'object' ? d.pressureAltitude.value : d.pressureAltitude,
+  ))].sort((a, b) => a - b);
+
+  return {
+    pressureAltitude: pa,
+    rpm,
+    kias: Math.round(kias.value),
+    ktas: Math.round(ktas.value),
+    clamped: kias.clamped || ktas.clamped,
+    fuelFlow,
+    endurance,
+    range,
+    fuelReferenceConditions: fuel?.referenceConditions || null,
+    cruiseDescription: cruise.description || '',
+    rpmRange: { min: rpmValues[0], max: rpmValues[rpmValues.length - 1] },
+    altRange: { min: altValues[0], max: altValues[altValues.length - 1] },
+  };
+}
