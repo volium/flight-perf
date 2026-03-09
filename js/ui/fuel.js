@@ -129,6 +129,13 @@ export function initFuel(panelEl) {
 
   function calculate() {
     const currentUnits = getUnits();
+
+    // Clamp fuel to max capacity before calculating
+    const fobRaw = parseFloat(fobEl.value) || 0;
+    if (fobRaw > maxFuel) {
+      fobEl.value = maxFuel;
+    }
+
     const dist = parseFloat(distEl.value);
     const altRaw = parseFloat(altEl.value);
     const altimeterRaw = parseFloat(altimeterEl.value);

@@ -110,6 +110,13 @@ export function initWeightBalance(panelEl) {
 
   function calculate() {
     const currentUnits = getUnits();
+
+    // Clamp fuel to max capacity before calculating
+    const fuelRaw = parseFloat(fuelEl.value) || 0;
+    if (fuelRaw > maxFuelDisplay) {
+      fuelEl.value = maxFuelDisplay;
+    }
+
     const stationWeights = {};
     for (const station of nonFuelStations) {
       const el = panelEl.querySelector(`#wb-${station.id}`);
