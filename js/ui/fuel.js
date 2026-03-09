@@ -143,6 +143,7 @@ export function initFuel(panelEl) {
     if (!isNaN(val) && val > maxFuel) {
       fobEl.value = maxFuel;
     }
+    updateFuelWeight();
     const saved = storage.get(STORAGE_KEY, {});
     saved.fuelOnBoard = fobEl.value;
     storage.set(STORAGE_KEY, saved);
