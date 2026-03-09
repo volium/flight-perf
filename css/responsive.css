@@ -1,9 +1,5 @@
 /* ── Responsive: Phone portrait (< 480px) ── */
 @media (max-width: 479px) {
-  .app-header__aircraft {
-    display: none;
-  }
-
   .form-row {
     flex-direction: column;
     gap: 0;
