@@ -4,6 +4,7 @@ import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { displayUnit, esc } from './perf-ui-common.js';
 import { getUnits, fuelUnitLabel } from '../data/unit-preferences.js';
+import { getFuelType } from '../data/fuel-types.js';
 
 const STORAGE_KEY = 'wb_inputs';
 
@@ -70,10 +71,16 @@ export function initWeightBalance(panelEl) {
 
         <div class="form-group">
           <label class="form-label" for="wb-fuel">Fuel</label>
-          <div class="form-suffix">
-            <input class="form-input" id="wb-fuel" type="number" inputmode="decimal"
-                   min="0" max="${maxFuelDisplay}" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
-            <span class="form-suffix__label">${fuelLabel}</span>
+          <div class="form-row form-row--fuel">
+            <div class="form-suffix">
+              <input class="form-input" id="wb-fuel" type="number" inputmode="decimal"
+                     min="0" max="${maxFuelDisplay}" step="0.1" placeholder="0" value="${esc(saved._fuel ?? '')}">
+              <span class="form-suffix__label">${fuelLabel}</span>
+            </div>
+            <div class="form-suffix form-suffix--compact">
+              <input class="form-input form-input--readonly" id="wb-fuel-weight" type="text" readonly tabindex="-1" value="">
+              <span class="form-suffix__label">${weightUnit}</span>
+            </div>
           </div>
           ${maxFuelNote}
         </div>
@@ -94,8 +101,22 @@ export function initWeightBalance(panelEl) {
   `;
 
   const fuelEl = panelEl.querySelector('#wb-fuel');
+  const fuelWeightEl = panelEl.querySelector('#wb-fuel-weight');
   const calcBtn = panelEl.querySelector('#wb-calculate');
   const resultsEl = panelEl.querySelector('#wb-results');
+
+  function updateFuelWeight() {
+    const qty = parseFloat(fuelEl.value) || 0;
+    if (qty <= 0) {
+      fuelWeightEl.value = '0';
+      return;
+    }
+    const wt = computeFuelWeight(qty, units.fuel, weightUnit, fuelConfig);
+    fuelWeightEl.value = formatNumber(Math.round(wt * 10) / 10, 1);
+  }
+
+  fuelEl.addEventListener('input', updateFuelWeight);
+  updateFuelWeight();
 
   fuelEl.addEventListener('change', () => {
     const val = parseFloat(fuelEl.value);
@@ -115,6 +136,7 @@ export function initWeightBalance(panelEl) {
     const fuelRaw = parseFloat(fuelEl.value) || 0;
     if (fuelRaw > maxFuelDisplay) {
       fuelEl.value = maxFuelDisplay;
+      updateFuelWeight();
     }
 
     const stationWeights = {};
@@ -346,4 +368,17 @@ function getFuelMax(fuelConfig, fuelUnit) {
   if (fuelUnit === 'L' && cap.valueUSGal) return Math.round(cap.valueUSGal * 3.78541 * 10) / 10;
   if (fuelUnit === 'L') return cap.value;
   return cap.value;
+}
+
+function computeFuelWeight(quantity, fuelUnit, weightUnit, fuelConfig) {
+  const fuel = getFuelType(fuelConfig?.type || '100LL');
+  if (fuelUnit === 'us_gal') {
+    const lbs = quantity * (fuel?.densityLbsPerGal || 6.02);
+    return weightUnit === 'kg' ? convert.lbsToKg(lbs) : lbs;
+  }
+  if (fuelUnit === 'L') {
+    const kg = quantity * (fuel?.densityKgPerL || 0.721);
+    return weightUnit === 'lbs' ? convert.kgToLbs(kg) : kg;
+  }
+  return quantity;
 }

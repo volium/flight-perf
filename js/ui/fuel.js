@@ -4,6 +4,7 @@ import { storage } from '../data/storage.js';
 import { getProfile } from '../app.js';
 import { esc } from './perf-ui-common.js';
 import { getUnits, altitudePlaceholder, altimeterPlaceholder, altimeterDefault, fuelUnitLabel, displayFuel } from '../data/unit-preferences.js';
+import { getFuelType } from '../data/fuel-types.js';
 
 const STORAGE_KEY = 'fuel_inputs';
 
@@ -75,10 +76,16 @@ export function initFuel(panelEl) {
 
         <div class="form-group">
           <label class="form-label" for="fp-fob">Fuel On Board</label>
-          <div class="form-suffix">
-            <input class="form-input" id="fp-fob" type="number" inputmode="decimal"
-                   min="0" max="${maxFuel}" step="0.1" placeholder="e.g. ${maxFuel}" value="${esc(saved.fuelOnBoard ?? '')}">
-            <span class="form-suffix__label">${fuelLabel}</span>
+          <div class="form-row form-row--fuel">
+            <div class="form-suffix">
+              <input class="form-input" id="fp-fob" type="number" inputmode="decimal"
+                     min="0" max="${maxFuel}" step="0.1" placeholder="e.g. ${maxFuel}" value="${esc(saved.fuelOnBoard ?? '')}">
+              <span class="form-suffix__label">${fuelLabel}</span>
+            </div>
+            <div class="form-suffix form-suffix--compact">
+              <input class="form-input form-input--readonly" id="fp-fob-weight" type="text" readonly tabindex="-1" value="">
+              <span class="form-suffix__label">${units.weight}</span>
+            </div>
           </div>
           <div class="form-hint">Capacity: ${maxFuel} ${fuelLabel}</div>
         </div>
@@ -113,9 +120,23 @@ export function initFuel(panelEl) {
   const altimeterEl = panelEl.querySelector('#fp-altimeter');
   const rpmEl = panelEl.querySelector('#fp-rpm');
   const fobEl = panelEl.querySelector('#fp-fob');
+  const fobWeightEl = panelEl.querySelector('#fp-fob-weight');
   const reserveEl = panelEl.querySelector('#fp-reserve');
   const calcBtn = panelEl.querySelector('#fp-calculate');
   const resultsEl = panelEl.querySelector('#fp-results');
+
+  function updateFuelWeight() {
+    const qty = parseFloat(fobEl.value) || 0;
+    if (qty <= 0) {
+      fobWeightEl.value = '0';
+      return;
+    }
+    const wt = computeFuelWeight(qty, units.fuel, units.weight, fuelConfig);
+    fobWeightEl.value = formatNumber(Math.round(wt * 10) / 10, 1);
+  }
+
+  fobEl.addEventListener('input', updateFuelWeight);
+  updateFuelWeight();
 
   fobEl.addEventListener('change', () => {
     const val = parseFloat(fobEl.value);
@@ -134,6 +155,7 @@ export function initFuel(panelEl) {
     const fobRaw = parseFloat(fobEl.value) || 0;
     if (fobRaw > maxFuel) {
       fobEl.value = maxFuel;
+      updateFuelWeight();
     }
 
     const dist = parseFloat(distEl.value);
@@ -279,5 +301,19 @@ function getFuelMax(fuelConfig, fuelUnit) {
   if (fuelUnit === 'us_gal' && cap.unit === 'L') return Math.round(cap.value * 0.264172 * 10) / 10;
   if (fuelUnit === 'L' && cap.unit === 'us_gal') return Math.round(cap.value * 3.78541 * 10) / 10;
   if (fuelUnit === 'L' && cap.valueUSGal) return Math.round(cap.valueUSGal * 3.78541 * 10) / 10;
+  if (fuelUnit === 'L') return cap.value;
   return cap.value;
+}
+
+function computeFuelWeight(quantity, fuelUnit, weightUnit, fuelConfig) {
+  const fuel = getFuelType(fuelConfig?.type || '100LL');
+  if (fuelUnit === 'us_gal') {
+    const lbs = quantity * (fuel?.densityLbsPerGal || 6.02);
+    return weightUnit === 'kg' ? convert.lbsToKg(lbs) : lbs;
+  }
+  if (fuelUnit === 'L') {
+    const kg = quantity * (fuel?.densityKgPerL || 0.721);
+    return weightUnit === 'lbs' ? convert.kgToLbs(kg) : kg;
+  }
+  return quantity;
 }

@@ -195,6 +195,25 @@ body {
   -moz-appearance: textfield;
 }
 
+.form-input--readonly {
+  background-color: var(--color-bg-tab);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.form-row--fuel {
+  align-items: flex-end;
+}
+
+.form-row--fuel > .form-suffix {
+  flex: 1;
+}
+
+.form-row--fuel > .form-suffix--compact {
+  flex: 0 0 auto;
+  max-width: 7rem;
+}
+
 .form-input:focus {
   outline: none;
   border-color: var(--color-border-focus);
