@@ -210,8 +210,8 @@ body {
 }
 
 .form-row--fuel > .form-suffix--compact {
-  flex: 0 0 auto;
-  max-width: 7rem;
+  flex: 1;
+  max-width: none;
 }
 
 .form-input:focus {

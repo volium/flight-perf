@@ -5,6 +5,16 @@
     gap: 0;
   }
 
+  .form-row--fuel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .form-row--fuel > .form-suffix {
+    min-width: 8rem;
+  }
+
   .app-main {
     padding: var(--space-sm);
   }
