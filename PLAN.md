@@ -1082,9 +1082,11 @@ flight-perf/
 | 2.7 | W&B calculation in display units (eliminate round-trip conversion errors) | ✅ |
 | 2.8 | W&B improved diagnostics (overweight vs CG out of range) | ✅ |
 | 2.9 | W&B chart improvements (callout label, marker z-order) | ✅ |
-| 2.10 | Input validation and error messaging improvements | |
-| 2.11 | Unit tests for interpolation, calculations, and margins | |
-| 2.12 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation | |
+| 2.10 | Live fuel weight display in W&B and Fuel Planner | ✅ |
+| 2.11 | Mobile responsive fixes (header truncation, fuel row layout) | ✅ |
+| 2.12 | Input validation and error messaging improvements | |
+| 2.13 | Unit tests for interpolation, calculations, and margins | |
+| 2.14 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation | |
 
 ### Phase 3 — Polish & Extensibility
 
