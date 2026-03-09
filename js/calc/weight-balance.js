@@ -28,8 +28,8 @@ export function calculateWeightBalance(profile, inputs) {
   const profileWU = wb.weightUnit || 'kg';
   const wu = displayWeightUnit || profileWU;
 
-  // Convert profile values into display weight unit (done once)
-  const emptyWeight = convertWeight(limits.emptyWeight.value, profileWU, wu);
+  // Convert profile values into display weight unit (done once, rounded to whole numbers)
+  const emptyWeight = Math.round(convertWeight(limits.emptyWeight.value, profileWU, wu));
   const maxWeight = Math.round(convertWeight(limits.maxTakeoffWeight.value, profileWU, wu));
   const emptyArm = computeEmptyArm(wb);
   const emptyMoment = emptyWeight * emptyArm;

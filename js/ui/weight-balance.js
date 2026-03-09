@@ -29,7 +29,7 @@ export function initWeightBalance(panelEl) {
   const nonFuelStations = wb.stations.filter((s) => !s.fuelStation);
 
   // Convert profile values to display weight unit
-  const emptyWeightDisplay = convertWeight(profile.limits.emptyWeight.value, profileWeightUnit, weightUnit);
+  const emptyWeightDisplay = Math.round(convertWeight(profile.limits.emptyWeight.value, profileWeightUnit, weightUnit));
   const maxTakeoffDisplay = convertWeight(profile.limits.maxTakeoffWeight.value, profileWeightUnit, weightUnit);
 
   let stationHTML = '';
@@ -64,7 +64,7 @@ export function initWeightBalance(panelEl) {
       <div class="panel">
         <h2 class="panel__title">Weight &amp; Balance</h2>
 
-        <div class="wb-section-label">Empty Weight: ${formatNumber(emptyWeightDisplay, 1)} ${weightUnit}</div>
+        <div class="wb-section-label">Empty Weight: ${formatNumber(emptyWeightDisplay)} ${weightUnit}</div>
 
         ${stationHTML}
 
