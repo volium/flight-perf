@@ -255,6 +255,15 @@ select.form-input {
   background-color: var(--color-accent-hover);
 }
 
+.btn-danger {
+  color: #ffffff;
+  background-color: var(--color-error);
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
 .btn-block {
   width: 100%;
 }

@@ -35,6 +35,7 @@ export function initSettings(triggerBtn, overlayEl, panelEl) {
 
   initThemeToggle(panelEl);
   initUnitToggles(panelEl);
+  initResetButton(panelEl);
 
   return { open, close };
 }
@@ -148,3 +149,33 @@ const UNIT_FIELD_MAP = {
     { storageKey: 'fuel_inputs', fields: ['fuelOnBoard'] },
   ],
 };
+
+/**
+ * Calculator input storage keys to clear on reset.
+ * Settings (theme, global_units, profileUrl) are preserved.
+ */
+const INPUT_STORAGE_KEYS = [
+  'density_inputs',
+  'takeoff_inputs',
+  'landing_inputs',
+  'climb_inputs',
+  'cruise_inputs',
+  'wb_inputs',
+  'crosswind_inputs',
+  'fuel_inputs',
+];
+
+function initResetButton(panelEl) {
+  const btn = panelEl.querySelector('#setting-reset');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (!confirm('Clear all saved calculator inputs? Unit preferences and theme will be kept.')) return;
+
+    for (const key of INPUT_STORAGE_KEYS) {
+      storage.remove(key);
+    }
+
+    initCalculators();
+  });
+}
