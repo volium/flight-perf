@@ -181,12 +181,13 @@
 
     "climb": {
       "method": "table_interpolation",
-      "description": "Rate of climb at max continuous power (5500 RPM), MTOW",
+      "description": "Rate of climb at max continuous power (5500 RPM), MTOW, ISA conditions",
       "variables": ["pressureAltitude"],
       "results": ["bestClimbSpeed", "rateOfClimb"],
       "referenceConditions": {
         "weight": { "value": 600, "unit": "kg" },
-        "power": "max continuous (5500 RPM)"
+        "power": "max continuous (5500 RPM)",
+        "atmosphere": "ISA"
       },
       "data": [
         {
