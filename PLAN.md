@@ -1099,6 +1099,21 @@ flight-perf/
 | 3.7 | Accessibility audit and fixes |
 | 3.8 | Crosswind diagram enhancement (component arrows with values) |
 | 3.9 | Better PWA icons (replace placeholder solid-color PNGs) |
+| 3.10 | Wind aloft support for fuel planner (adjust ground speed and fuel burn for headwind/tailwind at cruise altitude) |
+
+### Phase 4 — Flight Planning Integration
+
+| Task | Description |
+|------|-------------|
+| 4.1 | Airport database — searchable local database of airports (identifier, name, location, elevation, runways) |
+| 4.2 | Airport selector UI — search/autocomplete for departure and destination airports |
+| 4.3 | Weather integration — fetch current METAR and TAF for selected airports (online feature) |
+| 4.4 | Winds aloft integration — fetch or manually enter wind data at cruise altitude |
+| 4.5 | NavLog generator — calculate headings, ground speed, time/fuel per leg based on winds |
+| 4.6 | Comprehensive flight plan — combine W&B, takeoff/landing performance, climb, cruise, fuel, and weather into a single flight plan view |
+| 4.7 | Flight plan export/print — generate a printable navlog and flight plan summary |
+
+> **Note on current limitations:** The Cruise and Fuel Planner calculators currently assume **calm winds** (zero wind component). TAS equals ground speed in all calculations. Phase 3.10 and Phase 4.4/4.5 will add wind aloft support to compute actual ground speed, adjusted fuel burn, and time en route.
 
 ---
 
@@ -1204,6 +1219,8 @@ Shared modules:
 | Cruise | 2D interpolation | `performance.cruise`, `performance.fuelConsumption`, `fuel` | No |
 | W&B | Station summation + point-in-polygon | `weightBalance`, `limits`, `fuel` | Yes (envelope chart) |
 | Fuel | 1D + 2D interpolation | `performance.fuelConsumption`, `performance.cruise`, `fuel` | No |
+
+> **Calm wind assumption:** Cruise and Fuel Planner calculators currently assume calm winds — TAS equals ground speed. Wind aloft support is planned for Phase 3.10 / Phase 4.
 
 ### Supported Profile Methods
 
