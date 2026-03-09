@@ -7,7 +7,7 @@
 | **Project** | flight-perf |
 | **Repository** | GitHub — hosted via GitHub Pages |
 | **Created** | 2026-03-07 |
-| **Status** | Phase 1 Complete |
+| **Status** | Phase 2 In Progress |
 
 ---
 
@@ -1027,6 +1027,7 @@ flight-perf/
 │   └── data/
 │       ├── profile-loader.js   # Fetch & validate aircraft profiles
 │       ├── fuel-types.js       # Built-in fuel type registry (100LL, MOGAS, Jet-A, etc.)
+│       ├── unit-preferences.js # Global unit preferences, conversion, smart rounding
 │       └── storage.js          # localStorage abstraction with prefix namespacing
 │
 ├── profiles/
@@ -1067,15 +1068,22 @@ flight-perf/
 | 1.17 | Fuel type registry (100LL, MOGAS, Jet-A, etc.) | ✅ |
 | 1.18 | GitHub Pages deployment | ✅ |
 
-### Phase 2 — Enhancements
+### Phase 2 — Enhancements (In Progress)
 
-| Task | Description |
-|------|-------------|
-| 2.1 | Profile import (file picker + IndexedDB) |
-| 2.2 | Global unit preferences (settings panel) |
-| 2.3 | Input validation and error messaging improvements |
-| 2.4 | Unit tests for interpolation, calculations, and margins |
-| 2.5 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation |
+| Task | Description | Status |
+|------|-------------|--------|
+| 2.1 | Profile import (file picker + IndexedDB) | |
+| 2.2 | Global unit preferences (settings panel) | ✅ |
+| 2.3 | Unit conversion with smart rounding on preference change | ✅ |
+| 2.4 | Results display in user-preferred units | ✅ |
+| 2.5 | Global reset button (clear all calculator inputs) | ✅ |
+| 2.6 | Dark theme fixes (header, variables) | ✅ |
+| 2.7 | W&B calculation in display units (eliminate round-trip conversion errors) | ✅ |
+| 2.8 | W&B improved diagnostics (overweight vs CG out of range) | ✅ |
+| 2.9 | W&B chart improvements (callout label, marker z-order) | ✅ |
+| 2.10 | Input validation and error messaging improvements | |
+| 2.11 | Unit tests for interpolation, calculations, and margins | |
+| 2.12 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation | |
 
 ### Phase 3 — Polish & Extensibility
 
@@ -1083,11 +1091,13 @@ flight-perf/
 |------|-------------|
 | 3.1 | Additional W&B features: fuel burn CG shift visualization, moment-based entry option |
 | 3.2 | Print / export results |
-| 3.3 | Second aircraft profile (e.g., Cessna 172) for testing flexibility |
-| 3.4 | Profile validation with detailed error messages |
-| 3.5 | Onboarding / help tooltips |
-| 3.6 | Performance optimizations (lazy loading, code splitting) |
+| 3.3 | Profile import (file picker + IndexedDB) |
+| 3.4 | Second aircraft profile (e.g., Cessna 172) for testing flexibility |
+| 3.5 | Profile validation with detailed error messages |
+| 3.6 | Onboarding / help tooltips |
 | 3.7 | Accessibility audit and fixes |
+| 3.8 | Crosswind diagram enhancement (component arrows with values) |
+| 3.9 | Better PWA icons (replace placeholder solid-color PNGs) |
 
 ---
 

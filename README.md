@@ -27,6 +27,7 @@
 
 - **100% Offline** — Works without internet after initial load (PWA with Service Worker).
 - **Aircraft Profiles** — Extensible JSON-based profiles supporting reference tables, interpolation tables, and formulas.
+- **Global Unit Preferences** — Set altitude (ft/m), distance (ft/m), altimeter (inHg/hPa), temperature (°C/°F), weight (kg/lbs), and fuel (L/US gal) once in Settings — all calculators adapt. Values convert with smart rounding when switching units.
 - **Safety Margins** — Configurable percentage or fixed distance margins with round-up option.
 - **Responsive** — Designed for desktop monitors, tablets, and phones.
 - **Dark Mode** — Automatic (follows system) or manual toggle.
@@ -92,7 +93,7 @@ If you use VS Code, install the [Live Server](https://marketplace.visualstudio.c
 
 ## Project Status
 
-🟢 **Phase 1 Complete** — All 8 calculators implemented with the Sling LSA (N246LT) profile. See [PLAN.md](PLAN.md) for the full roadmap.
+🟢 **Phase 2 In Progress** — All 8 calculators complete, global unit preferences implemented, W&B improvements done. See [PLAN.md](PLAN.md) for the full roadmap.
 
 ## Aircraft Profiles
 
