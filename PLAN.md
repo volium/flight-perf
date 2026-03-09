@@ -27,7 +27,8 @@
 12. [Testing Strategy](#12-testing-strategy)
 13. [Deployment](#13-deployment)
 14. [Open Questions & Decisions](#14-open-questions--decisions)
-15. [References](#15-references)
+15. [Implementation Reference](#15-implementation-reference)
+16. [References](#16-references)
 
 ---
 
@@ -1150,17 +1151,146 @@ Optional future enhancement:
 
 | # | Question | Status | Decision |
 |---|----------|--------|----------|
-| Q1 | Should we use TypeScript from the start or add it later? | **Open** | Leaning toward plain JS for simplicity; TS can be added in Phase 3. |
+| Q1 | Should we use TypeScript from the start or add it later? | **Open** | Leaning toward plain JS for simplicity; TS can be added later. |
 | Q2 | Should profiles support calculated fields (formulas as strings) or only data tables? | **Open** | Leaning toward both — formulas for simple calcs, tables for complex. |
-| Q3 | How to handle aircraft with non-standard performance data (e.g., only graph-based)? | **Open** | Graph data would be pre-digitized into point arrays in the profile. |
-| Q4 | Should W&B visualization use Canvas, SVG, or a library like Chart.js? | **Decided** | Inline SVG — lightweight, no dependency, responsive, supports multi-envelope rendering. |
+| Q3 | How to handle aircraft with non-standard performance data (e.g., only graph-based)? | **Decided** | Graph data would be pre-digitized into point arrays in the profile. |
+| Q4 | Should W&B visualization use Canvas, SVG, or a library like Chart.js? | **Decided** | Inline SVG — lightweight, no dependency, responsive. |
 | Q5 | Do we need multi-language support? | **Decided** | No — English only for v1. |
-| Q6 | Should the app support multiple unit systems simultaneously (e.g., show both ft and m)? | **Open** | Leaning toward a global unit preference with toggle. |
-| Q7 | Should we use a build tool (Vite) from the start? | **Open** | Leaning toward yes for dev experience, but keep the ability to run without it. |
+| Q6 | Should the app support multiple unit systems simultaneously? | **Decided** | Global unit preferences in Settings — 7 unit types, all calculators adapt. Per-calculator toggles removed. |
+| Q7 | Should we use a build tool (Vite) from the start? | **Decided** | No — raw ES Modules served directly. No build step required. |
 
 ---
 
-## 15. References
+## 15. Implementation Reference
+
+> This section documents the current implementation state for developer context.
+
+### Module Architecture
+
+```
+app.js (entry point)
+  ├── ui/tabs.js ─────────── Tab navigation, keyboard support, URL hash sync
+  ├── ui/settings.js ─────── Theme, profile, units, reset; triggers initCalculators()
+  ├── ui/density-altitude.js ── calc/density-altitude.js (formulas)
+  ├── ui/crosswind.js ──────── calc/crosswind.js (trigonometry)
+  ├── ui/takeoff.js ────────── calc/takeoff.js → engine/perf-common.js (reference_table)
+  ├── ui/landing.js ────────── calc/landing.js → engine/perf-common.js (reference_table)
+  ├── ui/climb.js ──────────── calc/climb.js → engine/interpolation.js (1D + integration)
+  ├── ui/cruise.js ─────────── calc/cruise.js → engine/interpolation.js (2D bilinear)
+  ├── ui/weight-balance.js ─── calc/weight-balance.js → data/fuel-types.js
+  ├── ui/fuel.js ───────────── calc/fuel.js → engine/interpolation.js + calc/density-altitude.js
+  └── data/profile-loader.js
+```
+
+Shared modules:
+- `engine/units.js` — unit conversions, `formatNumber()`
+- `engine/margins.js` — safety margin application (percentage, fixed, roundUp)
+- `engine/interpolation.js` — 1D linear, 1D from table, 2D bilinear
+- `engine/perf-common.js` — shared takeoff/landing reference table logic
+- `data/storage.js` — localStorage wrapper with `flightperf_` prefix
+- `data/unit-preferences.js` — global unit system (7 types, smart rounding, display helpers)
+- `data/fuel-types.js` — fuel density registry (100LL, MOGAS, Jet-A, etc.)
+- `ui/perf-ui-common.js` — shared margin fieldset UI, distance results renderer, `esc()`, `displayUnit()`, `buildRefNote()`
+
+### Calculator Summary
+
+| Calculator | Calc Method | Profile Data Used | SVG Graphics |
+|-----------|------------|-------------------|--------------|
+| Density Alt | Formula | None | No |
+| Crosswind | Trigonometry | `limits.maxCrosswind` | Yes (compass diagram) |
+| Takeoff | Reference table + margins | `performance.takeoff` | No |
+| Landing | Reference table + margins | `performance.landing` | No |
+| Climb | 1D interpolation + integration | `performance.climb`, `speeds` | No |
+| Cruise | 2D interpolation | `performance.cruise`, `performance.fuelConsumption`, `fuel` | No |
+| W&B | Station summation + point-in-polygon | `weightBalance`, `limits`, `fuel` | Yes (envelope chart) |
+| Fuel | 1D + 2D interpolation | `performance.fuelConsumption`, `performance.cruise`, `fuel` | No |
+
+### Supported Profile Methods
+
+| Method | Used By | Description |
+|--------|---------|-------------|
+| `reference_table` | Takeoff, Landing | Single reference condition with surface-type variants |
+| `table_interpolation` | Climb (1D), Cruise (2D), Fuel Consumption (1D) | Multi-dimensional interpolation between data points |
+
+### Storage Keys
+
+| Key | Contents | Cleared on Reset |
+|-----|----------|-----------------|
+| `flightperf_theme` | "auto" / "light" / "dark" | No |
+| `flightperf_profileUrl` | Profile JSON path | No |
+| `flightperf_global_units` | `{ altitude, altimeter, temperature, distance, weight, fuel }` | No |
+| `flightperf_density_inputs` | `{ fieldElevation, altimeter, oat }` | Yes |
+| `flightperf_takeoff_inputs` | `{ surface, marginType, marginPctValue, marginFixedValue, marginRoundUp }` | Yes |
+| `flightperf_landing_inputs` | Same as takeoff | Yes |
+| `flightperf_climb_inputs` | `{ departureElevation, targetAltitude, altimeter, transitionAltitude, cruiseClimbSpeed }` | Yes |
+| `flightperf_cruise_inputs` | `{ altitude, altimeter, rpm }` | Yes |
+| `flightperf_wb_inputs` | `{ pilot, passenger, baggage_front, baggage_rear, _fuel }` | Yes |
+| `flightperf_crosswind_inputs` | `{ windDirection, windSpeed, gustSpeed, runwayHeading }` | Yes |
+| `flightperf_fuel_inputs` | `{ tripDistance, cruiseAltitude, altimeter, rpm, fuelOnBoard, reserveMinutes }` | Yes |
+
+### Form ID Prefixes
+
+| Calculator | Prefix | Examples |
+|-----------|--------|---------|
+| Density Altitude | `da-` | `da-field-elev`, `da-oat`, `da-altimeter` |
+| Crosswind | `xw-` | `xw-runway`, `xw-wind-dir`, `xw-wind-speed` |
+| Takeoff | `to-` | `to-surface`, `to-margin-type` |
+| Landing | `ld-` | `ld-surface`, `ld-margin-type` |
+| Climb | `cl-` | `cl-dep-elev`, `cl-target`, `cl-altimeter` |
+| Cruise | `cr-` | `cr-alt`, `cr-altimeter`, `cr-rpm` |
+| W&B | `wb-` | `wb-pilot`, `wb-fuel`, `wb-fuel-weight` |
+| Fuel Planner | `fp-` | `fp-distance`, `fp-fob`, `fp-fob-weight` |
+| Settings | `setting-` | `setting-theme`, `setting-altitude` |
+
+### Unit Preferences — Conversion on Change
+
+When a unit is changed in Settings, `convertSavedInputs()` runs before `initCalculators()`:
+
+1. Reads saved inputs for each affected calculator from localStorage
+2. Converts numeric fields using `convertValue(value, fromUnit, toUnit, type)`
+3. Saves converted values back to localStorage
+4. `initCalculators()` re-renders all calculator panels with new unit suffixes
+
+Smart rounding rules for altitude/distance conversions:
+- **Meters:** nearest 5 (<100), 10 (100-499), 25 (500-1999), 50 (2000+)
+- **Feet:** nearest 10 (<500), 50 (500-1999), 100 (2000+)
+- **Fuel L:** nearest 1; **Fuel gal:** nearest 0.5
+- **Weight, temperature, altimeter hPa:** nearest whole number
+- **Altimeter inHg:** 2 decimal places
+
+### W&B Calculation Design
+
+All arithmetic runs in the user's **display weight unit** to avoid floating point precision errors from round-trip conversions. Profile values (empty weight, max weight, envelope boundary points, baggage constraints) are converted once from profile units to display units at the start of the calculation. User inputs are used directly without conversion. The envelope chart renders from the already-converted results.
+
+### Key Design Decisions Made
+
+| Decision | Rationale |
+|----------|-----------|
+| Zero production dependencies | Maximum control, smallest bundle, no framework overhead |
+| Per-calculator init functions | Each tab re-renders its HTML from scratch; simple, no state management needed |
+| Global unit prefs (not per-calculator) | Cleaner UI, consistent experience, one place to configure |
+| Calc engines return internal units, UI converts | Clean separation; calc engines are unit-agnostic (except W&B which uses display units) |
+| Service worker cache-first | Offline-first; users may be at remote airfields |
+| Profile obstacle height configurable | ICAO uses 15m, FAA uses 50ft; profile specifies which |
+| Fuel density from registry, not profile | Fuel type can change (100LL vs MOGAS); pilot preference, not aircraft property |
+| Smart rounding on unit conversion | Pilot-friendly numbers; 5000 ft → 1525 m, not 1524 m |
+
+### Codebase Statistics
+
+| Category | Count |
+|----------|-------|
+| Total JS files | 27 |
+| Total CSS files | 3 |
+| Total lines of JS | ~3,400 |
+| Total lines of CSS | ~830 |
+| Calculators | 8 |
+| Global unit types | 7 |
+| Fuel types supported | 6 |
+| Profile data points | ~60 (climb: 4, cruise: 20, fuel: 5, takeoff: 2, landing: 2, W&B stations: 5, etc.) |
+
+---
+
+## 16. References
 
 ### Aviation References
 

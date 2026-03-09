@@ -108,8 +108,11 @@ To add a new aircraft:
 ## Technology
 
 - **Zero production dependencies** — pure HTML5, CSS3 (custom properties), and vanilla JavaScript (ES Modules).
-- **PWA** — Service Worker caches all assets for offline use; installable on mobile and desktop.
+- **~3,400 lines of JS** across 27 modules (8 calculator UIs, 8 calc engines, 4 engine modules, 4 data modules, 3 shared UI modules).
+- **~830 lines of CSS** with CSS custom properties for theming (light/dark).
+- **PWA** — Service Worker caches all 38 assets for offline use; installable on mobile and desktop.
 - **No build step** — serve the files directly from any HTTP server.
+- **Detailed documentation** — see [PLAN.md](PLAN.md) Section 15 (Implementation Reference) for module architecture, storage keys, conventions, and design decisions.
 
 ## License
 
