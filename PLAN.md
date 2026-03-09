@@ -1100,6 +1100,7 @@ flight-perf/
 | 3.8 | Crosswind diagram enhancement (component arrows with values) |
 | 3.9 | Better PWA icons (replace placeholder solid-color PNGs) |
 | 3.10 | Wind aloft support for fuel planner (adjust ground speed and fuel burn for headwind/tailwind at cruise altitude) |
+| 3.11 | Climb calculator density altitude correction — currently uses pressure altitude with ISA-based ROC table; could accept OAT to compute density altitude and further derate climb performance for hot/high conditions |
 
 ### Phase 4 — Flight Planning Integration
 
