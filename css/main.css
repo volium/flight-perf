@@ -527,6 +527,11 @@ select.form-input {
   font-style: italic;
 }
 
+.fleet-card__ref {
+  color: var(--color-warning, #d97706);
+  font-style: italic;
+}
+
 .fleet-card__actions {
   display: flex;
   align-items: center;

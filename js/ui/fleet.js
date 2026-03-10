@@ -4,20 +4,22 @@
  * Provides the fleet overlay panel (list, add, edit, delete aircraft)
  * and the header fleet selector dropdown.
  *
+ * Design principle for instance data:
+ *   - Store ONLY what the user explicitly entered
+ *   - null = "not specified, use type's POH reference default"
+ *   - Empty string = "user saw the field, left it blank" (text fields)
+ *   - The display layer looks up type reference values when instance values are null
+ *   - The merger falls back to type references for null weight/CG
+ *
  * @module ui/fleet
  */
 
-import { getAllTypes, getAllInstances, putInstance, deleteInstance, getInstance } from '../data/db.js';
-import { mergeProfile } from '../data/profile-merger.js';
+import { getAllTypes, getAllInstances, putInstance, deleteInstance, getType } from '../data/db.js';
 import { storage } from '../data/storage.js';
-import { setActiveAircraft, getProfile, initCalculators } from '../app.js';
+import { setActiveAircraft, initCalculators } from '../app.js';
 
 /**
  * Initialize the fleet selector in the header and the fleet management panel.
- *
- * @param {HTMLSelectElement} selectorEl — the header <select> element
- * @param {HTMLElement} overlayEl — the fleet overlay container
- * @param {HTMLElement} panelEl — the fleet panel inside the overlay
  */
 export async function initFleet(selectorEl, overlayEl, panelEl) {
   if (!selectorEl || !overlayEl || !panelEl) return { open() {} };
@@ -43,17 +45,14 @@ export async function initFleet(selectorEl, overlayEl, panelEl) {
     }
   });
 
-  // Wire up the "Add Aircraft" button once (persists across re-renders)
   const addBtn = panelEl.querySelector('.fleet-add-btn');
   if (addBtn) {
     addBtn.addEventListener('click', () => showAddForm(panelEl));
   }
 
-  // Header selector change handler
   selectorEl.addEventListener('change', async () => {
     const value = selectorEl.value;
     if (value === '_manage') {
-      // Revert to current active aircraft
       const activeId = storage.get('activeAircraftId', null);
       selectorEl.value = activeId || '';
       open();
@@ -70,12 +69,10 @@ export async function initFleet(selectorEl, overlayEl, panelEl) {
 }
 
 /**
- * Refresh the header fleet selector <select> with current fleet data.
+ * Refresh the header fleet selector with current fleet data.
  */
 export async function refreshFleetSelector(selectorEl) {
-  if (!selectorEl) {
-    selectorEl = document.getElementById('fleet-selector');
-  }
+  if (!selectorEl) selectorEl = document.getElementById('fleet-selector');
   if (!selectorEl) return;
 
   const instances = await getAllInstances();
@@ -98,7 +95,6 @@ export async function refreshFleetSelector(selectorEl) {
     const label = inst.registration
       ? `${inst.registration} — ${typeName}`
       : `${inst.displayName || typeName}`;
-
     const opt = document.createElement('option');
     opt.value = inst.instanceId;
     opt.textContent = label;
@@ -106,7 +102,6 @@ export async function refreshFleetSelector(selectorEl) {
     selectorEl.appendChild(opt);
   }
 
-  // "Manage Fleet…" option
   const manageOpt = document.createElement('option');
   manageOpt.value = '_manage';
   manageOpt.textContent = '✦ Manage Fleet…';
@@ -135,7 +130,26 @@ async function renderFleetList(panelEl) {
       listEl.appendChild(card);
     }
   }
+}
 
+/**
+ * Format an instance field for display in the fleet card.
+ * Shows the user-entered value, or the type's reference value with "(POH reference)" tag,
+ * or "Not specified" if neither exists.
+ *
+ * @param {any} instanceValue — the instance's value (null if not user-specified)
+ * @param {any} referenceValue — the type's POH reference value
+ * @param {function} formatter — formats a value for display (receives the value object)
+ * @returns {string} HTML string
+ */
+function displayField(instanceValue, referenceValue, formatter) {
+  if (instanceValue != null) {
+    return formatter(instanceValue);
+  }
+  if (referenceValue != null) {
+    return `${formatter(referenceValue)} <span class="fleet-card__ref">(POH reference)</span>`;
+  }
+  return '<span class="fleet-card__ref">Not specified</span>';
 }
 
 function buildAircraftCard(instance, type, isActive, panelEl) {
@@ -144,15 +158,19 @@ function buildAircraftCard(instance, type, isActive, panelEl) {
 
   const typeName = type?.aircraft?.name || instance.typeId;
   const reg = instance.registration || '(no registration)';
-  const ew = instance.emptyWeight
-    ? `${instance.emptyWeight.value} ${instance.emptyWeight.unit}`
-    : 'POH reference';
+
+  const refEW = type?.limits?.referenceEmptyWeight || type?.limits?.emptyWeight;
+  const ewDisplay = displayField(
+    instance.emptyWeight,
+    refEW,
+    (v) => `${v.value} ${v.unit}`,
+  );
 
   card.innerHTML = `
     <div class="fleet-card__info">
       <div class="fleet-card__reg">${esc(reg)}</div>
       <div class="fleet-card__type">${esc(typeName)}</div>
-      <div class="fleet-card__detail">Empty weight: ${esc(ew)}</div>
+      <div class="fleet-card__detail">Empty weight: ${ewDisplay}</div>
       ${instance.notes ? `<div class="fleet-card__notes">${esc(instance.notes)}</div>` : ''}
     </div>
     <div class="fleet-card__actions">
@@ -176,7 +194,6 @@ function buildAircraftCard(instance, type, isActive, panelEl) {
     if (!confirm(`Remove ${reg} from your fleet?`)) return;
     await deleteInstance(instance.instanceId);
 
-    // If we deleted the active aircraft, switch to another
     const activeId = storage.get('activeAircraftId', null);
     if (activeId === instance.instanceId) {
       const remaining = await getAllInstances();
@@ -196,6 +213,13 @@ function buildAircraftCard(instance, type, isActive, panelEl) {
 }
 
 // ─── Add / Edit forms ───────────────────────────────────────────────────────
+//
+// Both forms share the same structure. The only difference:
+//   Add:  all fields start blank, placeholders from type reference
+//   Edit: user-entered fields pre-populated, null fields blank with placeholders
+//
+// buildInstanceFromForm handles both: user entered value → store it, blank → null.
+// No special tags, no source tracking. null means "use POH default."
 
 async function showAddForm(panelEl) {
   const formArea = panelEl.querySelector('.fleet-form-area');
@@ -203,56 +227,15 @@ async function showAddForm(panelEl) {
 
   const types = await getAllTypes();
 
-  formArea.innerHTML = `
-    <h3 class="fleet-form__title">Add Aircraft</h3>
-    <div class="form-group">
-      <label class="form-label" for="fleet-type">Aircraft Type</label>
-      <select class="form-input" id="fleet-type">
-        ${types.map((t) => `<option value="${esc(t.typeId)}">${esc(t.aircraft?.name || t.typeId)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-reg">Registration (Tail Number)</label>
-      <input class="form-input" id="fleet-reg" type="text" placeholder="e.g. N246LT" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-ew">Empty Weight <span class="form-label--optional">(from weigh report)</span></label>
-      <div class="form-row">
-        <input class="form-input" id="fleet-ew" type="number" step="any" placeholder="POH default">
-        <select class="form-input form-input--unit" id="fleet-ew-unit">
-          <option value="lbs">lbs</option>
-          <option value="kg">kg</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-cg">Empty CG <span class="form-label--optional">(from weigh report)</span></label>
-      <div class="form-row">
-        <input class="form-input" id="fleet-cg" type="number" step="any" placeholder="POH default">
-        <select class="form-input form-input--unit" id="fleet-cg-unit">
-          <option value="in">in</option>
-          <option value="mm">mm</option>
-          <option value="percent_mac">% MAC</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-notes">Notes <span class="form-label--optional">(optional)</span></label>
-      <input class="form-input" id="fleet-notes" type="text" placeholder="e.g. Annual due March 2026">
-    </div>
-    <div class="fleet-form__buttons">
-      <button class="btn" id="fleet-save">Add to Fleet</button>
-      <button class="btn btn-secondary" id="fleet-cancel">Cancel</button>
-    </div>
-  `;
-
-  // Pre-fill empty weight from selected type
-  const typeSelect = formArea.querySelector('#fleet-type');
-  prefillFromType(formArea, types, typeSelect.value);
-  typeSelect.addEventListener('change', () => prefillFromType(formArea, types, typeSelect.value));
+  renderForm(formArea, types, {
+    title: 'Add Aircraft',
+    saveLabel: 'Add to Fleet',
+    instance: null,
+  });
 
   formArea.querySelector('#fleet-save').addEventListener('click', async () => {
-    const instance = buildInstanceFromForm(formArea);
+    const selectedType = getSelectedType(formArea, types);
+    const instance = buildInstanceFromForm(formArea, null);
     if (!instance) return;
     await putInstance(instance);
     await setActiveAircraft(instance.instanceId);
@@ -272,55 +255,17 @@ async function showEditForm(panelEl, existing) {
 
   const types = await getAllTypes();
 
-  formArea.innerHTML = `
-    <h3 class="fleet-form__title">Edit Aircraft</h3>
-    <div class="form-group">
-      <label class="form-label" for="fleet-type">Aircraft Type</label>
-      <select class="form-input" id="fleet-type">
-        ${types.map((t) => `<option value="${esc(t.typeId)}" ${t.typeId === existing.typeId ? 'selected' : ''}>${esc(t.aircraft?.name || t.typeId)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-reg">Registration (Tail Number)</label>
-      <input class="form-input" id="fleet-reg" type="text" value="${esc(existing.registration || '')}" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-ew">Empty Weight</label>
-      <div class="form-row">
-        <input class="form-input" id="fleet-ew" type="number" step="any" value="${existing.emptyWeight?.value ?? ''}">
-        <select class="form-input form-input--unit" id="fleet-ew-unit">
-          <option value="lbs" ${existing.emptyWeight?.unit === 'lbs' ? 'selected' : ''}>lbs</option>
-          <option value="kg" ${existing.emptyWeight?.unit === 'kg' ? 'selected' : ''}>kg</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-cg">Empty CG</label>
-      <div class="form-row">
-        <input class="form-input" id="fleet-cg" type="number" step="any" value="${getCGValue(existing.emptyCG)}">
-        <select class="form-input form-input--unit" id="fleet-cg-unit">
-          <option value="in" ${existing.emptyCG?.unit === 'in' ? 'selected' : ''}>in</option>
-          <option value="mm" ${existing.emptyCG?.unit === 'mm' ? 'selected' : ''}>mm</option>
-          <option value="percent_mac" ${existing.emptyCG?.unit === 'percent_mac' ? 'selected' : ''}>% MAC</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="fleet-notes">Notes</label>
-      <input class="form-input" id="fleet-notes" type="text" value="${esc(existing.notes || '')}">
-    </div>
-    <div class="fleet-form__buttons">
-      <button class="btn" id="fleet-save">Save Changes</button>
-      <button class="btn btn-secondary" id="fleet-cancel">Cancel</button>
-    </div>
-  `;
+  renderForm(formArea, types, {
+    title: 'Edit Aircraft',
+    saveLabel: 'Save Changes',
+    instance: existing,
+  });
 
   formArea.querySelector('#fleet-save').addEventListener('click', async () => {
     const updated = buildInstanceFromForm(formArea, existing);
     if (!updated) return;
     await putInstance(updated);
 
-    // Re-merge if this is the active aircraft
     const activeId = storage.get('activeAircraftId', null);
     if (activeId === updated.instanceId) {
       await setActiveAircraft(updated.instanceId);
@@ -336,9 +281,76 @@ async function showEditForm(panelEl, existing) {
   });
 }
 
-// ─── Form helpers ───────────────────────────────────────────────────────────
+/**
+ * Render the add/edit form. Shared between both flows.
+ * - If instance is null (add): all fields blank
+ * - If instance is provided (edit): user-entered fields pre-populated, null fields blank
+ * - In both cases, placeholders show POH reference values from the type
+ */
+function renderForm(formArea, types, { title, saveLabel, instance }) {
+  const selectedTypeId = instance?.typeId || types[0]?.typeId || '';
 
-function prefillFromType(formArea, types, typeId) {
+  // For edit: only show user-entered values (not null = not user-specified)
+  const regValue = instance?.registration || '';
+  const ewValue = instance?.emptyWeight?.value ?? '';
+  const cgValue = instance?.emptyCG != null ? (instance.emptyCG.value ?? instance.emptyCG.arm ?? '') : '';
+  const notesValue = instance?.notes || '';
+
+  formArea.innerHTML = `
+    <h3 class="fleet-form__title">${esc(title)}</h3>
+    <div class="form-group">
+      <label class="form-label" for="fleet-type">Aircraft Type</label>
+      <select class="form-input" id="fleet-type">
+        ${types.map((t) => `<option value="${esc(t.typeId)}" ${t.typeId === selectedTypeId ? 'selected' : ''}>${esc(t.aircraft?.name || t.typeId)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="fleet-reg">Registration (Tail Number)</label>
+      <input class="form-input" id="fleet-reg" type="text" value="${esc(regValue)}" placeholder="e.g. N246LT" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="fleet-ew">Empty Weight <span class="form-label--optional">(from weigh report)</span></label>
+      <div class="form-row">
+        <input class="form-input" id="fleet-ew" type="number" step="any" value="${ewValue}">
+        <select class="form-input form-input--unit" id="fleet-ew-unit">
+          <option value="lbs" ${instance?.emptyWeight?.unit === 'lbs' ? 'selected' : ''}>lbs</option>
+          <option value="kg" ${instance?.emptyWeight?.unit === 'kg' ? 'selected' : ''}>kg</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="fleet-cg">Empty CG <span class="form-label--optional">(from weigh report)</span></label>
+      <div class="form-row">
+        <input class="form-input" id="fleet-cg" type="number" step="any" value="${cgValue}">
+        <select class="form-input form-input--unit" id="fleet-cg-unit">
+          <option value="in" ${instance?.emptyCG?.unit === 'in' ? 'selected' : ''}>in</option>
+          <option value="mm" ${instance?.emptyCG?.unit === 'mm' ? 'selected' : ''}>mm</option>
+          <option value="percent_mac" ${instance?.emptyCG?.unit === 'percent_mac' ? 'selected' : ''}>% MAC</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="fleet-notes">Notes <span class="form-label--optional">(optional)</span></label>
+      <input class="form-input" id="fleet-notes" type="text" value="${esc(notesValue)}" placeholder="e.g. Annual due March 2026">
+    </div>
+    <div class="fleet-form__buttons">
+      <button class="btn" id="fleet-save">${esc(saveLabel)}</button>
+      <button class="btn btn-secondary" id="fleet-cancel">Cancel</button>
+    </div>
+  `;
+
+  // Set POH reference placeholders on empty numeric fields
+  const typeSelect = formArea.querySelector('#fleet-type');
+  setReferencePlaceholders(formArea, types, typeSelect.value);
+  typeSelect.addEventListener('change', () => {
+    setReferencePlaceholders(formArea, types, typeSelect.value);
+  });
+}
+
+/**
+ * Set placeholder text on empty weight/CG inputs showing the type's POH reference values.
+ */
+function setReferencePlaceholders(formArea, types, typeId) {
   const type = types.find((t) => t.typeId === typeId);
   if (!type) return;
 
@@ -348,29 +360,42 @@ function prefillFromType(formArea, types, typeId) {
   const cgUnit = formArea.querySelector('#fleet-cg-unit');
 
   const refEW = type.limits?.referenceEmptyWeight || type.limits?.emptyWeight;
-  if (refEW && ewInput && !ewInput.value) {
+  if (refEW && ewInput) {
     ewInput.placeholder = `${refEW.value} (POH)`;
-    if (ewUnit) ewUnit.value = refEW.unit;
+    if (ewUnit && !ewInput.value) ewUnit.value = refEW.unit;
   }
 
   const refCG = type.limits?.referenceEmptyCG || type.weightBalance?.emptyCG;
-  if (refCG && cgInput && !cgInput.value) {
+  if (refCG && cgInput) {
     const val = refCG.value ?? refCG.arm;
     cgInput.placeholder = `${val} (POH)`;
-    if (cgUnit) cgUnit.value = refCG.unit;
+    if (cgUnit && !cgInput.value) cgUnit.value = refCG.unit;
   }
 }
 
+// ─── Instance builder ───────────────────────────────────────────────────────
+
+/**
+ * Build an instance object from form inputs.
+ *
+ * Simple rule: if the user entered a value, store it. If blank, store null.
+ * No special tags, no fallback to type references here.
+ * The merger handles null → type reference fallback at runtime.
+ */
 function buildInstanceFromForm(formArea, existing) {
   const typeId = formArea.querySelector('#fleet-type')?.value;
+  if (!typeId) return null;
+
   const reg = formArea.querySelector('#fleet-reg')?.value?.trim() || '';
-  const ewVal = parseFloat(formArea.querySelector('#fleet-ew')?.value);
-  const ewUnit = formArea.querySelector('#fleet-ew-unit')?.value || 'lbs';
-  const cgVal = parseFloat(formArea.querySelector('#fleet-cg')?.value);
-  const cgUnit = formArea.querySelector('#fleet-cg-unit')?.value || 'in';
   const notes = formArea.querySelector('#fleet-notes')?.value?.trim() || '';
 
-  if (!typeId) return null;
+  const ewRaw = formArea.querySelector('#fleet-ew')?.value;
+  const ewVal = parseFloat(ewRaw);
+  const ewUnit = formArea.querySelector('#fleet-ew-unit')?.value || 'lbs';
+
+  const cgRaw = formArea.querySelector('#fleet-cg')?.value;
+  const cgVal = parseFloat(cgRaw);
+  const cgUnit = formArea.querySelector('#fleet-cg-unit')?.value || 'in';
 
   const now = new Date().toISOString();
 
@@ -379,8 +404,8 @@ function buildInstanceFromForm(formArea, existing) {
     typeId,
     registration: reg,
     displayName: reg || existing?.displayName || '',
-    emptyWeight: !isNaN(ewVal) ? { value: ewVal, unit: ewUnit } : (existing?.emptyWeight || null),
-    emptyCG: !isNaN(cgVal) ? buildCGObject(cgVal, cgUnit) : (existing?.emptyCG || null),
+    emptyWeight: !isNaN(ewVal) ? { value: ewVal, unit: ewUnit } : null,
+    emptyCG: !isNaN(cgVal) ? buildCGObject(cgVal, cgUnit) : null,
     notes,
     lastWeighed: existing?.lastWeighed || null,
     createdAt: existing?.createdAt || now,
@@ -393,10 +418,12 @@ function buildCGObject(value, unit) {
   return { arm: value, unit };
 }
 
-function getCGValue(cg) {
-  if (!cg) return '';
-  return cg.value ?? cg.arm ?? '';
+function getSelectedType(formArea, types) {
+  const typeId = formArea.querySelector('#fleet-type')?.value;
+  return types.find((t) => t.typeId === typeId) || null;
 }
+
+// ─── Utilities ──────────────────────────────────────────────────────────────
 
 function esc(str) {
   if (str == null) return '';
