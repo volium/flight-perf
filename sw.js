@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'flightperf-v1';
+const CACHE_VERSION = 'flightperf-v2';
 
 const APP_SHELL = [
   './',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   './js/app.js',
   './js/ui/tabs.js',
   './js/ui/settings.js',
+  './js/ui/fleet.js',
   './js/ui/density-altitude.js',
   './js/ui/crosswind.js',
   './js/ui/takeoff.js',
@@ -33,9 +34,14 @@ const APP_SHELL = [
   './js/engine/interpolation.js',
   './js/data/fuel-types.js',
   './js/data/profile-loader.js',
+  './js/data/profile-validator.js',
+  './js/data/profile-merger.js',
+  './js/data/profile-migrator.js',
+  './js/data/db.js',
   './js/data/storage.js',
   './js/data/unit-preferences.js',
   './profiles/sling-lsa.json',
+  './profiles/types/sling-lsa.json',
 ];
 
 self.addEventListener('install', (event) => {
