@@ -49,10 +49,9 @@ Build a **modern, lightweight, offline-first** web application that performs per
 
 ### Non-Goals (for now)
 
-- Flight planning (route, weather, NOTAM integration) — these require online services.
-- Real-time data feeds (METAR, TAF).
-- Multi-user / account systems.
 - Regulatory compliance certification (this is a **tool**, not a certified instrument).
+- Server-side user accounts or authentication (Google Drive sync uses client-side OAuth only).
+- Real-time push notifications or data feeds.
 
 ---
 
@@ -382,10 +381,227 @@ The `fuel.inputUnit` field controls how the fuel input field is labeled and what
 
 ### Profile Management
 
-- **Bundled profiles**: Ship with 1–2 example profiles in `/profiles/`.
-- **User-imported profiles**: Loaded via file picker, stored in IndexedDB.
-- **Profile validation**: JSON Schema validation on import with clear error messages.
-- **Profile editor**: Out of scope for v1 — profiles are authored as JSON files externally.
+- **Bundled type profiles**: Ship in `/profiles/types/` — available to all users.
+- **Community profiles**: Contributed via GitHub PR, merged into bundled.
+- **Custom type profiles**: Created by user via wizard, stored in IndexedDB.
+- **Profile validation**: Programmatic validation (not JSON Schema library — zero-dep constraint) on import and creation.
+
+### Aircraft Type vs. Instance Architecture
+
+The profile system separates **aircraft type data** (from the POH — shared across all airplanes of the same make/model) from **aircraft instance data** (specific to one airplane).
+
+| Concept | What It Represents | Examples | Storage |
+|---------|-------------------|----------|---------|
+| **Type Profile** | POH data for a make/model | "Cessna 172S Skyhawk SP", "Sling LSA" | `profiles/types/` (bundled) or IndexedDB (custom) |
+| **Aircraft Instance** | A specific airplane | "N246LT" (a Sling LSA), "N54321" (a Cessna 172S) | IndexedDB |
+| **Fleet** | User's collection of instances | All the airplanes a pilot flies | IndexedDB |
+
+**Why this separation?**
+- A Cessna 172S type profile is authored once and shared by all users.
+- Multiple users (or one user) can have different N-numbered Cessna 172S instances with different empty weights.
+- Flight schools may have 5 identical C172s — same POH data, different weigh reports.
+- Bundled type profiles can be updated without affecting instance data.
+
+#### Type Profile (v2) — What It Contains
+
+Everything from the POH that applies to **all aircraft of this make/model**:
+
+| Section | Required? | Content |
+|---------|-----------|---------|
+| `schemaVersion` | ✅ Required | `"2.0"` |
+| `aircraft` | ✅ Required | `id` (slug), `name`, `manufacturer`, `type`, `category`, `engine`, `enginePower`, `propeller` |
+| `limits` | ✅ Required | `maxTakeoffWeight`, `maxLandingWeight`, `referenceEmptyWeight`, `referenceEmptyCG`, `baggageMaxWeight`, `maxCrosswind` |
+| `fuel` | ✅ Required | `type`, `inputUnit`, `capacity`, `usableCapacity`, `tanks[]` |
+| `speeds` | ✅ Required | At minimum `vne`, `vs0`; all others optional (`vx`, `vy`, `vrot`, `vlof`, `vref`, etc.) |
+| `weightBalance` | ⚠️ Optional | `cgReference`, `macLeadingEdge`, `macLength`, `stations[]`, `envelopes[]`, `baggageConstraints[]` |
+| `performance.takeoff` | ⚠️ Optional | Method + data |
+| `performance.landing` | ⚠️ Optional | Method + data |
+| `performance.climb` | ⚠️ Optional | Method + data |
+| `performance.cruise` | ⚠️ Optional | Method + data |
+| `performance.fuelConsumption` | ⚠️ Optional | Method + data |
+
+**Why optional performance sections?** Not all POHs provide all data. A user might create a profile for an experimental aircraft that only has W&B and basic speeds. Each calculator gracefully shows "No [X] data in this aircraft profile" when its section is missing.
+
+**Schema changes from v1 → v2:**
+
+| v1 Field | v2 Field | Change |
+|----------|----------|--------|
+| `profileVersion: "1.0"` | `schemaVersion: "2.0"` | Renamed |
+| `aircraft.tailNumber` | *(removed)* | Moved to instance |
+| `limits.emptyWeight` | `limits.referenceEmptyWeight` | Renamed — POH book value, overridable by instance |
+| `weightBalance.emptyCG` | `limits.referenceEmptyCG` | Moved — POH book value, overridable by instance |
+| `limits.usefulLoad` | *(removed)* | Derived at runtime: `maxTakeoffWeight − effectiveEmptyWeight` |
+| *(new)* | `aircraft.icaoType` | Optional ICAO type designator (e.g., "C172") |
+
+#### Type Profile v2 Example (Cessna 172S)
+
+```jsonc
+{
+  "schemaVersion": "2.0",
+  "aircraft": {
+    "id": "cessna-172s",
+    "name": "Cessna 172S Skyhawk SP",
+    "manufacturer": "Cessna / Textron Aviation",
+    "icaoType": "C172",
+    "type": "single-engine-land",
+    "category": "normal",
+    "engine": "Lycoming IO-360-L2A",
+    "enginePower": { "value": 180, "unit": "hp" },
+    "propeller": { "type": "fixed-pitch", "blades": 2 }
+  },
+  "limits": {
+    "maxTakeoffWeight": { "value": 2550, "unit": "lbs" },
+    "maxLandingWeight": { "value": 2550, "unit": "lbs" },
+    "referenceEmptyWeight": { "value": 1663, "unit": "lbs" },
+    "referenceEmptyCG": { "arm": 40.5, "unit": "in" },
+    "baggageMaxWeight": { "value": 120, "unit": "lbs" },
+    "maxCrosswind": { "value": 15, "unit": "kt" }
+  },
+  "fuel": { ... },
+  "speeds": { ... },
+  "weightBalance": { ... },
+  "performance": {
+    "takeoff": { "method": "table_interpolation", ... },
+    "landing": { "method": "table_interpolation", ... },
+    "climb": { "method": "table_interpolation", ... },
+    "cruise": { "method": "table_interpolation", ... },
+    "fuelConsumption": { "method": "table_interpolation", ... }
+  }
+}
+```
+
+#### Aircraft Instance — What It Contains
+
+Instance-specific data for **one particular airplane**:
+
+```jsonc
+{
+  "instanceId": "uuid-v4",                  // auto-generated
+  "typeId": "cessna-172s",                   // links to type profile
+  "registration": "N54321",                  // tail number
+  "displayName": "N54321",                   // user-editable label
+  "emptyWeight": { "value": 1680, "unit": "lbs" },  // from weigh report
+  "emptyCG": { "arm": 41.2, "unit": "in" },         // from weigh report
+  "lastWeighed": "2025-11-15",               // optional
+  "notes": "Annual due March 2026",          // optional
+  "createdAt": "2026-03-10T01:00:00Z",
+  "updatedAt": "2026-03-10T01:00:00Z"
+}
+```
+
+**Override semantics:**
+- If instance has `emptyWeight` → use it; else fall back to type's `referenceEmptyWeight`
+- If instance has `emptyCG` → use it; else fall back to type's `referenceEmptyCG`
+- `usefulLoad` is always computed: `maxTakeoffWeight − effectiveEmptyWeight`
+- Performance data, envelopes, speeds, and stations always come from the type profile — instances don't override POH data
+
+#### Profile Merger (Compatibility Bridge)
+
+When a user selects an aircraft from their fleet, the system **merges** the type profile + instance into a runtime profile object that the existing calc/UI modules consume unchanged.
+
+```
+mergeProfile(typeProfile, instance) → runtimeProfile
+```
+
+The merge function:
+1. Deep-clones the type profile
+2. Sets `aircraft.tailNumber` = `instance.registration`
+3. Sets `limits.emptyWeight` = `instance.emptyWeight` (or type's `referenceEmptyWeight`)
+4. Sets `weightBalance.emptyCG` = `instance.emptyCG` (or type's `referenceEmptyCG`)
+5. Recomputes `limits.usefulLoad` = `maxTakeoffWeight − emptyWeight`
+6. Returns the merged object
+
+**This is the key architectural insight**: the merge layer means **zero changes to any calc or UI modules**. They continue to consume the same profile shape they expect today.
+
+#### v1 → v2 Migration
+
+When the app encounters a v1 profile:
+1. Detect `profileVersion: "1.0"` (absence of `schemaVersion`)
+2. Run `migrateV1toV2(v1Profile)` which:
+   - Extracts `tailNumber`, `emptyWeight`, `emptyCG` into an instance object
+   - Renames `emptyWeight` → `referenceEmptyWeight` in the type
+   - Sets `schemaVersion: "2.0"`
+   - Returns `{ type, instance }`
+3. Store both in IndexedDB
+
+### Fleet Management
+
+Users maintain a **fleet** — a collection of aircraft instances. Each instance references a type profile from the library.
+
+```
+Type Library                Fleet                    Active Aircraft
+┌──────────────┐     ┌─────────────────┐     ┌──────────────────────┐
+│ Sling LSA    │────▶│ N246LT (Sling)  │────▶│ Merged runtime       │
+│ Cessna 172S  │────▶│ N12345 (C172S)  │     │ profile for calcs    │
+│ Custom: RV-7 │────▶│ N67890 (RV-7)   │     └──────────────────────┘
+└──────────────┘     └─────────────────┘
+                           ▲ user selects
+```
+
+**Workflow:**
+1. User browses the aircraft type library (bundled + custom types)
+2. User selects a type and creates an instance (enters registration, actual empty weight/CG)
+3. Instance appears in their fleet
+4. When performing calculations, user selects an aircraft from their fleet
+5. The app loads the type profile + instance → mergeProfile() → calculators use merged profile
+
+**Header aircraft selector** (replaces current static display):
+- Dropdown showing fleet: `N246LT — Sling LSA` / `N12345 — Cessna 172S`
+- "Manage Fleet…" option opens fleet management panel
+- On selection change: load merged profile, re-init all calculators, persist active ID
+
+**First-run experience:**
+1. Seed bundled types into IndexedDB `types` store
+2. Show welcome: "Add your first aircraft"
+3. Prompt for type selection, tail number, empty weight/CG
+4. Auto-migrate v1 data if present
+
+### Profile Creation Wizard
+
+A multi-step form guides users through entering POH data to create a custom type profile:
+
+| Step | Title | Fields | Required? |
+|------|-------|--------|-----------|
+| 1 | **Aircraft Info** | Name, manufacturer, type (SEL/MEL/etc.), category (normal/utility/LSA), engine, power, propeller | ✅ Yes |
+| 2 | **Limits & Speeds** | Max takeoff weight, max landing weight, reference empty weight, reference empty CG, baggage limits, Vne, Vs0, Vy, Vx, other V-speeds | ✅ Yes (limits); speeds partially required |
+| 3 | **Fuel System** | Fuel type (select from registry), capacity, usable capacity, number of tanks, tank names/capacities, preferred input unit | ✅ Yes |
+| 4 | **Weight & Balance** | CG reference (% MAC or arm), MAC leading edge & length (if %MAC), stations (name, arm, max weight), envelopes (polygon points), baggage constraints | ⚠️ Optional |
+| 5 | **Takeoff Performance** | Method selection (reference_table or table_interpolation), obstacle height, reference conditions, data entry | ⚠️ Optional |
+| 6 | **Landing Performance** | Same structure as takeoff | ⚠️ Optional |
+| 7 | **Climb Performance** | Method, variables, data points (altitude vs. ROC, climb speed) | ⚠️ Optional |
+| 8 | **Cruise Performance** | Method, variables, data grid (altitude × power setting → speeds) | ⚠️ Optional |
+| 9 | **Fuel Consumption** | Method, variables, data points (power setting → fuel flow, speed) | ⚠️ Optional |
+| 10 | **Review & Save** | Summary of all entered data, validation results, save button | ✅ Yes |
+
+**UX features:**
+- Progress indicator with completion status
+- Skip optional steps (steps 4–9) — profile simply won't have those sections
+- Save draft at any step; drafts appear in type library with "draft" badge
+- Table builder for performance data (add/remove rows)
+- Live SVG preview for CG envelope point entry
+- Real-time per-field validation; full validation on Review step
+
+### Profile Validation
+
+Programmatic validator in `js/data/profile-validator.js` (not a JSON Schema library — respects zero-dep constraint):
+
+```
+validateTypeProfile(profile) → { valid: boolean, errors: ValidationError[], warnings: ValidationWarning[] }
+```
+
+| Category | Rule | Severity |
+|----------|------|----------|
+| Structure | Required sections present | Error |
+| Structure | `schemaVersion` is `"2.0"` | Error |
+| Physics | `maxTakeoffWeight` > `referenceEmptyWeight` | Error |
+| Physics | `usableCapacity` ≤ `capacity` | Error |
+| Physics | `Vs0` < `Vne` | Error |
+| W&B | Envelope polygon has ≥ 3 points | Error (if W&B section present) |
+| W&B | Reference empty weight falls within envelope | Warning |
+| Performance | At least 2 data points for interpolation | Error (if section present) |
+| Performance | Data points are ordered (ascending altitude, etc.) | Warning |
+| Fuel | Tank capacities sum to total capacity | Warning |
+| Completeness | No performance sections defined | Warning |
 
 ---
 
@@ -935,10 +1151,40 @@ For three or more variables (e.g., cruise performance vs. altitude, RPM, and tem
 
 | Data | Storage | Rationale |
 |------|---------|-----------|
-| App settings (units, theme, last profile, margins) | `localStorage` | Small, synchronous, simple |
-| Aircraft profiles (bundled) | Service Worker cache | Cached with app shell |
-| Aircraft profiles (user-imported) | `IndexedDB` | Can store large JSON blobs |
+| App settings (units, theme, margins) | `localStorage` | Small, synchronous, existing pattern |
+| Active aircraft instance ID | `localStorage` | Quick lookup on app start |
 | Last-used inputs per calculation type | `localStorage` | Convenience — restore on revisit |
+| Aircraft instances (fleet) | `IndexedDB` | Structured data, needs indexing |
+| Custom type profiles | `IndexedDB` | Large JSON blobs, queryable |
+| Bundled type profiles | Service Worker cache + `IndexedDB` (seeded on first run) | Always available offline; IDB copy enables uniform query |
+| Google Drive sync metadata | `IndexedDB` | Timestamps, file IDs |
+
+#### IndexedDB Design
+
+**Database:** `flightperf`, **Version:** 1
+
+| Object Store | Key Path | Indexes | Contents |
+|-------------|----------|---------|----------|
+| `types` | `typeId` | `source` (bundled/custom), `aircraft.name` | Type profile JSON objects |
+| `fleet` | `instanceId` | `typeId`, `registration`, `updatedAt` | Aircraft instance objects |
+| `syncMeta` | `key` | — | Google Drive sync state |
+
+New module: `js/data/db.js` — Promise-based wrappers over vanilla `IDBDatabase` API (zero dependencies).
+
+### Google Drive Backup (Optional)
+
+For users who want cross-device sync or cloud backup, the app supports optional Google Drive integration. The app is **fully functional offline without it**.
+
+| Aspect | Design |
+|--------|--------|
+| **Auth** | Google Identity Services (GIS) — client-side OAuth 2.0, no backend |
+| **Scope** | `drive.appdata` — hidden app-specific folder, can't access user's files |
+| **Data format** | JSON files in `appDataFolder`: `fleet.json`, `custom-types.json`, `preferences.json` |
+| **Sync strategy** | Manual with auto-prompt — "Backup Now" button + prompt after significant changes |
+| **Conflict resolution** | Last-write-wins with timestamps; local is source of truth |
+| **Script loading** | GIS library (~30 KB) lazy-loaded only when user navigates to Settings → Google Drive |
+| **Offline** | Operates normally; sync button shows "Offline — will sync when connected" |
+| **Requirements** | Google Cloud project with OAuth client ID configured for `volium.github.io` |
 
 ### Offline Indicator
 
@@ -1052,7 +1298,9 @@ flight-perf/
 │       └── unit-preferences.test.js # convertValue, smart rounding tests
 │
 ├── profiles/
-│   └── sling-lsa.json          # N246LT Sling LSA profile (POH data)
+│   └── types/                     # Aircraft type profiles (v2 format)
+│       ├── sling-lsa.json         # N246LT Sling LSA type profile
+│       └── cessna-172s.json       # Cessna 172S Skyhawk SP type profile
 │
 └── icons/
     ├── icon-192.png
@@ -1093,7 +1341,6 @@ flight-perf/
 
 | Task | Description | Status |
 |------|-------------|--------|
-| 2.1 | Profile import (file picker + IndexedDB) | |
 | 2.2 | Global unit preferences (settings panel) | ✅ |
 | 2.3 | Unit conversion with smart rounding on preference change | ✅ |
 | 2.4 | Results display in user-preferred units | ✅ |
@@ -1106,37 +1353,95 @@ flight-perf/
 | 2.11 | Mobile responsive fixes (header truncation, fuel row layout) | ✅ |
 | 2.12 | Input validation and error messaging improvements | |
 | 2.13 | Unit tests for interpolation, calculations, and margins | ✅ |
-| 2.14 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation | |
 
-### Phase 3 — Polish & Extensibility
+> **Note:** Tasks 2.1 (profile import) and 2.14 (Cessna 172) from the original plan are absorbed into Phase 3, where they fit naturally with the new type/instance architecture.
+
+### Phase 3 — Aircraft Data System ⭐ NEW
+
+> Core architectural evolution: type/instance separation, IndexedDB, fleet management, new profiles, profile wizard, Google Drive backup.
+
+#### Phase 3A — Data Foundation
+
+| Task | Description | Depends On |
+|------|-------------|------------|
+| 3A.1 | **IndexedDB abstraction** (`js/data/db.js`) — Promise-based CRUD for `types`, `fleet`, `syncMeta` stores | — |
+| 3A.2 | **Type profile schema v2** — define structure, document required vs optional sections | — |
+| 3A.3 | **Profile validator** (`js/data/profile-validator.js`) — comprehensive validation with errors + warnings | 3A.2 |
+| 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 |
+| 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 |
+| 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 |
+| 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 |
+| 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 |
+| 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 |
+
+#### Phase 3B — Fleet Management
+
+| Task | Description | Depends On |
+|------|-------------|------------|
+| 3B.1 | **Fleet management UI** (`js/ui/fleet.js`) — list, add, edit, remove aircraft instances | 3A.* |
+| 3B.2 | **Header aircraft selector** — dropdown in header bar to switch active aircraft | 3B.1 |
+| 3B.3 | **First-run experience** — detect empty fleet, prompt to create first aircraft, auto-migrate v1 data | 3B.1, 3A.5 |
+| 3B.4 | **Aircraft switching** — on selection change: load merged profile, re-init calculators, update header, persist active ID | 3B.2, 3A.4 |
+
+#### Phase 3C — New Profiles
+
+| Task | Description | Depends On |
+|------|-------------|------------|
+| 3C.1 | **Cessna 172S type profile** (`profiles/types/cessna-172s.json`) — full POH data with `table_interpolation` for takeoff/landing (altitude × temperature grids) | 3A.2 |
+| 3C.2 | **Extend takeoff/landing calcs** for `table_interpolation` method — multi-variable grids (Cessna uses altitude × temp, Sling uses reference tables) | 3C.1 |
+| 3C.3 | **Cessna 172S unit tests** — POH-derived test cases for all calculators with the new profile | 3C.2 |
+| 3C.4 | **Profile import/export** — file picker import (JSON) with v2 validation; export type profile and/or instance as JSON download | 3A.3, 3B.1 |
+
+#### Phase 3D — Profile Creation Wizard
+
+| Task | Description | Depends On |
+|------|-------------|------------|
+| 3D.1 | **Wizard framework** (`js/ui/wizard.js`) — multi-step form infrastructure, progress indicator, step navigation, draft saving | 3A.1 |
+| 3D.2 | **Wizard steps 1–3** — Aircraft Info, Limits & Speeds, Fuel System (required steps) | 3D.1 |
+| 3D.3 | **Wizard step 4** — Weight & Balance (stations editor, envelope point editor with live SVG preview) | 3D.2 |
+| 3D.4 | **Wizard steps 5–9** — Performance data entry (table builder, method selection) | 3D.2 |
+| 3D.5 | **Wizard step 10** — Review & Save (validation summary, save to IDB `types` store) | 3D.2–3D.4, 3A.3 |
+
+#### Phase 3E — Google Drive Backup
+
+| Task | Description | Depends On |
+|------|-------------|------------|
+| 3E.1 | **Google Drive module** (`js/data/gdrive.js`) — GIS auth, appDataFolder CRUD, lazy script loading | 3A.1 |
+| 3E.2 | **Settings UI** for Google Drive — sign in/out, last sync time, manual backup/restore buttons | 3E.1 |
+| 3E.3 | **Backup flow** — serialize fleet + custom types + preferences → JSON files in appDataFolder | 3E.1 |
+| 3E.4 | **Restore flow** — download from appDataFolder → merge into local IDB (conflict resolution: local wins with flag) | 3E.1, 3E.3 |
+| 3E.5 | **Auto-prompt** — after significant changes (add/edit/remove aircraft, import profile), suggest backup if signed in | 3E.3 |
+
+### Phase 4 — Calculation Improvements & Polish
+
+> Previously Phase 3. Calc accuracy improvements and UI polish.
 
 | Task | Description |
 |------|-------------|
-| 3.1 | Additional W&B features: fuel burn CG shift visualization, moment-based entry option |
-| 3.2 | Print / export results |
-| 3.3 | Profile import (file picker + IndexedDB) |
-| 3.4 | Second aircraft profile (e.g., Cessna 172) for testing flexibility |
-| 3.5 | Profile validation with detailed error messages |
-| 3.6 | Onboarding / help tooltips |
-| 3.7 | Accessibility audit and fixes |
-| 3.8 | Crosswind diagram enhancement (component arrows with values) |
-| 3.9 | Better PWA icons (replace placeholder solid-color PNGs) |
-| 3.10 | Wind aloft support for fuel planner (adjust ground speed and fuel burn for headwind/tailwind at cruise altitude) |
-| 3.11 | Climb calculator density altitude correction — currently uses pressure altitude with ISA-based ROC table; could accept OAT to compute density altitude and further derate climb performance for hot/high conditions |
+| 4.1 | Wind aloft support for fuel planner (headwind/tailwind at cruise altitude) |
+| 4.2 | Climb calculator density altitude correction (accept OAT, compute DA, derate ROC) |
+| 4.3 | W&B enhancements: fuel burn CG shift visualization, moment-based entry option |
+| 4.4 | Crosswind diagram enhancement (component arrows with values) |
+| 4.5 | Print / export calculation results |
+| 4.6 | Onboarding / help tooltips |
+| 4.7 | Accessibility audit and WCAG 2.1 AA fixes |
+| 4.8 | Better PWA icons (replace placeholder solid-color PNGs) |
 
-### Phase 4 — Flight Planning Integration
+### Phase 5 — Flight Planning Integration
+
+> Previously Phase 4. Requires aircraft data system (Phase 3) to be complete.
 
 | Task | Description |
 |------|-------------|
-| 4.1 | Airport database — searchable local database of airports (identifier, name, location, elevation, runways) |
-| 4.2 | Airport selector UI — search/autocomplete for departure and destination airports |
-| 4.3 | Weather integration — fetch current METAR and TAF for selected airports (online feature) |
-| 4.4 | Winds aloft integration — fetch or manually enter wind data at cruise altitude |
-| 4.5 | NavLog generator — calculate headings, ground speed, time/fuel per leg based on winds |
-| 4.6 | Comprehensive flight plan — combine W&B, takeoff/landing performance, climb, cruise, fuel, and weather into a single flight plan view |
-| 4.7 | Flight plan export/print — generate a printable navlog and flight plan summary |
+| 5.1 | Airport database — searchable local database of airports (identifier, name, location, elevation, runways) |
+| 5.2 | Airport selector UI — search/autocomplete for departure and destination airports |
+| 5.3 | Weather integration — fetch current METAR and TAF for selected airports (online feature) |
+| 5.4 | Winds aloft integration — fetch or manually enter wind data at cruise altitude |
+| 5.5 | NavLog generator — calculate headings, ground speed, time/fuel per leg based on winds |
+| 5.6 | Comprehensive flight plan — combine W&B, takeoff/landing performance, climb, cruise, fuel, and weather into a single flight plan view |
+| 5.7 | Flight plan export/print — generate a printable navlog and flight plan summary |
 
-> **Note on current limitations:** The Cruise and Fuel Planner calculators currently assume **calm winds** (zero wind component). TAS equals ground speed in all calculations. Phase 3.10 and Phase 4.4/4.5 will add wind aloft support to compute actual ground speed, adjusted fuel burn, and time en route.
+> **Note on current limitations:** The Cruise and Fuel Planner calculators currently assume **calm winds** (zero wind component). TAS equals ground speed in all calculations. Phase 4.1 and Phase 5.4/5.5 will add wind aloft support to compute actual ground speed, adjusted fuel burn, and time en route.
 
 ---
 
@@ -1261,6 +1566,15 @@ Optional future enhancement:
 | Q5 | Do we need multi-language support? | **Decided** | No — English only for v1. |
 | Q6 | Should the app support multiple unit systems simultaneously? | **Decided** | Global unit preferences in Settings — 7 unit types, all calculators adapt. Per-calculator toggles removed. |
 | Q7 | Should we use a build tool (Vite) from the start? | **Decided** | No — raw ES Modules served directly. No build step required. |
+| Q8 | Type/instance separation — should we split profiles? | **Decided** | Yes — type profiles contain shared POH data, instances contain per-airplane data (registration, weigh report). Profile merger produces runtime profile for calc layer compatibility. |
+| Q9 | Storage architecture for fleet and profiles? | **Decided** | localStorage for settings + active ID; IndexedDB for types, fleet, sync metadata. Google Drive for optional cloud backup. |
+| Q10 | Google Drive integration approach? | **Decided** | Client-side OAuth 2.0 via Google Identity Services, `drive.appdata` scope (hidden folder), lazy-loaded GIS script. No backend. |
+| Q11 | Multiple instances of same type? | **Decided** | Yes — core use case. Flight schools may have multiple C172s with different weigh reports. |
+| Q12 | Bundled type profiles update strategy? | **Open** | Leaning toward: on app update, re-seed bundled types if a `dataVersion` field is newer. User's custom types are never overwritten. |
+| Q13 | Community profile distribution? | **Open** | Leaning toward PR to repo → becomes bundled. Future: hosted registry. |
+| Q14 | CG envelope entry UX in profile wizard? | **Open** | Leaning toward coordinate pairs with live SVG preview. Click-to-place on canvas is complex and less precise for POH-derived data. |
+| Q15 | Google Drive sync granularity? | **Open** | Leaning toward few large files (`fleet.json`, `custom-types.json`, `preferences.json`). Fewer API calls, simpler conflict management. |
+| Q16 | Google Cloud project ownership for OAuth client ID? | **Open** | GCP project needed before Phase 3E.1. |
 
 ---
 
@@ -1272,8 +1586,15 @@ Optional future enhancement:
 
 ```
 app.js (entry point)
+  ├── data/db.js ──────────── IndexedDB abstraction (types, fleet, syncMeta)
+  ├── data/profile-loader.js ── Load type profiles from IDB; seed bundled types
+  ├── data/profile-merger.js ── mergeProfile(type, instance) → runtime profile
+  ├── data/profile-migrator.js ─ v1 → v2 migration
+  ├── data/profile-validator.js ─ Comprehensive v2 profile validation
   ├── ui/tabs.js ─────────── Tab navigation, keyboard support, URL hash sync
   ├── ui/settings.js ─────── Theme, profile, units, reset; triggers initCalculators()
+  ├── ui/fleet.js ─────────── Fleet management (add/edit/remove aircraft instances)
+  ├── ui/wizard.js ────────── Profile creation wizard (multi-step form)
   ├── ui/density-altitude.js ── calc/density-altitude.js (formulas)
   ├── ui/crosswind.js ──────── calc/crosswind.js (trigonometry)
   ├── ui/takeoff.js ────────── calc/takeoff.js → engine/perf-common.js (reference_table)
@@ -1281,8 +1602,7 @@ app.js (entry point)
   ├── ui/climb.js ──────────── calc/climb.js → engine/interpolation.js (1D + integration)
   ├── ui/cruise.js ─────────── calc/cruise.js → engine/interpolation.js (2D bilinear)
   ├── ui/weight-balance.js ─── calc/weight-balance.js → data/fuel-types.js
-  ├── ui/fuel.js ───────────── calc/fuel.js → engine/interpolation.js + calc/density-altitude.js
-  └── data/profile-loader.js
+  └── ui/fuel.js ───────────── calc/fuel.js → engine/interpolation.js + calc/density-altitude.js
 ```
 
 Shared modules:
@@ -1291,8 +1611,13 @@ Shared modules:
 - `engine/interpolation.js` — 1D linear, 1D from table, 2D bilinear
 - `engine/perf-common.js` — shared takeoff/landing reference table logic
 - `data/storage.js` — localStorage wrapper with `flightperf_` prefix
+- `data/db.js` — IndexedDB wrapper (Promise-based CRUD for types, fleet, syncMeta)
 - `data/unit-preferences.js` — global unit system (7 types, smart rounding, display helpers)
 - `data/fuel-types.js` — fuel density registry (100LL, MOGAS, Jet-A, etc.)
+- `data/profile-merger.js` — type + instance → runtime profile (compatibility bridge)
+- `data/profile-validator.js` — comprehensive v2 profile validation (errors + warnings)
+- `data/profile-migrator.js` — v1 → v2 profile migration
+- `data/gdrive.js` — Google Drive backup/restore (lazy-loaded, optional)
 - `ui/perf-ui-common.js` — shared margin fieldset UI, distance results renderer, `esc()`, `displayUnit()`, `buildRefNote()`
 
 ### Calculator Summary
@@ -1308,7 +1633,7 @@ Shared modules:
 | W&B | Station summation + point-in-polygon | `weightBalance`, `limits`, `fuel` | Yes (envelope chart) |
 | Fuel | 1D + 2D interpolation | `performance.fuelConsumption`, `performance.cruise`, `fuel` | No |
 
-> **Calm wind assumption:** Cruise and Fuel Planner calculators currently assume calm winds — TAS equals ground speed. Wind aloft support is planned for Phase 3.10 / Phase 4.
+> **Calm wind assumption:** Cruise and Fuel Planner calculators currently assume calm winds — TAS equals ground speed. Wind aloft support is planned for Phase 4.1 / Phase 5.
 
 ### Supported Profile Methods
 
@@ -1322,7 +1647,7 @@ Shared modules:
 | Key | Contents | Cleared on Reset |
 |-----|----------|-----------------|
 | `flightperf_theme` | "auto" / "light" / "dark" | No |
-| `flightperf_profileUrl` | Profile JSON path | No |
+| `flightperf_activeAircraftId` | Active aircraft instance UUID | No |
 | `flightperf_global_units` | `{ altitude, altimeter, temperature, distance, weight, fuel }` | No |
 | `flightperf_density_inputs` | `{ fieldElevation, altimeter, oat }` | Yes |
 | `flightperf_takeoff_inputs` | `{ surface, marginType, marginPctValue, marginFixedValue, marginRoundUp }` | Yes |
@@ -1415,4 +1740,4 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 ---
 
-*Last updated: 2026-03-10*
+*Last updated: 2026-03-10 — Phase 3 Aircraft Data System architecture added*
