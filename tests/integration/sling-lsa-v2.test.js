@@ -38,12 +38,12 @@ describe('Sling LSA v2 type profile', () => {
   });
 
   it('has referenceEmptyWeight (not v1 emptyWeight)', () => {
-    expect(v2Profile.limits.referenceEmptyWeight).toEqual({ value: 384, unit: 'kg' });
+    expect(v2Profile.limits.referenceEmptyWeight).toEqual({ value: 370, unit: 'kg' });
     expect(v2Profile.limits.emptyWeight).toBeUndefined();
   });
 
-  it('has referenceEmptyCG (not in weightBalance)', () => {
-    expect(v2Profile.limits.referenceEmptyCG).toEqual({ value: 23.6, unit: 'percent_mac' });
+  it('has no referenceEmptyCG (POH does not specify standard CG)', () => {
+    expect(v2Profile.limits.referenceEmptyCG).toEqual({ value: 23.2, unit: 'percent_mac' });
     expect(v2Profile.weightBalance.emptyCG).toBeUndefined();
   });
 
@@ -108,7 +108,7 @@ describe('Sling LSA v2 merged profile — calc module compatibility', () => {
   });
 
   it('merged profile has usefulLoad', () => {
-    expect(merged.limits.usefulLoad.value).toBe(216);
+    expect(merged.limits.usefulLoad.value).toBe(216); // 600 - 384 (instance weight)
     expect(merged.limits.usefulLoad.unit).toBe('kg');
   });
 
@@ -156,11 +156,15 @@ describe('Sling LSA v2 merged profile — no instance', () => {
   const merged = mergeProfile(v2Profile, null);
 
   it('uses referenceEmptyWeight as emptyWeight', () => {
-    expect(merged.limits.emptyWeight.value).toBe(384);
+    expect(merged.limits.emptyWeight.value).toBe(370);
   });
 
-  it('uses referenceEmptyCG as emptyCG', () => {
-    expect(merged.weightBalance.emptyCG.value).toBe(23.6);
+  it('emptyCG falls back to referenceEmptyCG', () => {
+    expect(merged.weightBalance.emptyCG.value).toBe(23.2);
+  });
+
+  it('usefulLoad computed from POH reference weight', () => {
+    expect(merged.limits.usefulLoad.value).toBe(230); // 600 - 370
   });
 
   it('calculators still work with type defaults', () => {

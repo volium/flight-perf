@@ -22,8 +22,8 @@
   "limits": {
     "maxTakeoffWeight":   { "value": 600,  "unit": "kg", "valueLbs": 1320 },
     "maxLandingWeight":   { "value": 600,  "unit": "kg", "valueLbs": 1320 },
-    "emptyWeight":        { "value": 384.0, "unit": "kg" },
-    "usefulLoad":         { "value": 216.0, "unit": "kg" },
+    "emptyWeight":        { "value": 370, "unit": "kg" },
+    "usefulLoad":         { "value": 230, "unit": "kg" },
     "baggageMaxWeight":   { "value": 15,   "unit": "kg", "note": "Combined front + rear max 15 kg" },
     "maxCrosswind":       { "value": 15,   "unit": "kt" }
   },
@@ -62,7 +62,7 @@
     "macLeadingEdge": { "value": 1366, "unit": "mm" },
     "macLength":      { "value": 1339, "unit": "mm" },
 
-    "emptyCG": { "value": 23.6, "unit": "percent_mac" },
+    "emptyCG": { "value": 23.2, "unit": "percent_mac" },
 
     "stations": [
       {

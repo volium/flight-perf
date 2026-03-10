@@ -18,8 +18,8 @@ function v1SlingProfile() {
     limits: {
       maxTakeoffWeight: { value: 600, unit: 'kg', valueLbs: 1320 },
       maxLandingWeight: { value: 600, unit: 'kg', valueLbs: 1320 },
-      emptyWeight: { value: 384.0, unit: 'kg' },
-      usefulLoad: { value: 216.0, unit: 'kg' },
+      emptyWeight: { value: 370, unit: 'kg' },
+      usefulLoad: { value: 230, unit: 'kg' },
       baggageMaxWeight: { value: 15, unit: 'kg' },
       maxCrosswind: { value: 15, unit: 'kt' },
     },
@@ -41,7 +41,7 @@ function v1SlingProfile() {
       armUnit: 'mm',
       macLeadingEdge: { value: 1366, unit: 'mm' },
       macLength: { value: 1339, unit: 'mm' },
-      emptyCG: { value: 23.6, unit: 'percent_mac' },
+      emptyCG: { value: 23.2, unit: 'percent_mac' },
       stations: [
         { id: 'pilot', name: 'Pilot', arm: { value: 1959, unit: 'mm' } },
         { id: 'fuel', name: 'Fuel', arm: { value: 1511, unit: 'mm' }, fuelStation: true },
@@ -141,7 +141,7 @@ describe('migrateV1toV2 — type profile', () => {
 
   it('renames limits.emptyWeight to limits.referenceEmptyWeight', () => {
     const { type } = migrateV1toV2(v1SlingProfile());
-    expect(type.limits.referenceEmptyWeight).toEqual({ value: 384.0, unit: 'kg' });
+    expect(type.limits.referenceEmptyWeight).toEqual({ value: 370, unit: 'kg' });
     expect(type.limits.emptyWeight).toBeUndefined();
   });
 
@@ -152,7 +152,7 @@ describe('migrateV1toV2 — type profile', () => {
 
   it('moves weightBalance.emptyCG to limits.referenceEmptyCG', () => {
     const { type } = migrateV1toV2(v1SlingProfile());
-    expect(type.limits.referenceEmptyCG).toEqual({ value: 23.6, unit: 'percent_mac' });
+    expect(type.limits.referenceEmptyCG).toEqual({ value: 23.2, unit: 'percent_mac' });
     expect(type.weightBalance.emptyCG).toBeUndefined();
   });
 
@@ -219,12 +219,12 @@ describe('migrateV1toV2 — instance', () => {
 
   it('copies emptyWeight from type referenceEmptyWeight', () => {
     const { instance } = migrateV1toV2(v1SlingProfile());
-    expect(instance.emptyWeight).toEqual({ value: 384.0, unit: 'kg' });
+    expect(instance.emptyWeight).toEqual({ value: 370, unit: 'kg' });
   });
 
   it('copies emptyCG from type referenceEmptyCG', () => {
     const { instance } = migrateV1toV2(v1SlingProfile());
-    expect(instance.emptyCG).toEqual({ value: 23.6, unit: 'percent_mac' });
+    expect(instance.emptyCG).toEqual({ value: 23.2, unit: 'percent_mac' });
   });
 
   it('sets migration note', () => {

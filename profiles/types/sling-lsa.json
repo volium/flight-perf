@@ -23,8 +23,8 @@
   "limits": {
     "maxTakeoffWeight":     { "value": 600,   "unit": "kg", "valueLbs": 1320 },
     "maxLandingWeight":     { "value": 600,   "unit": "kg", "valueLbs": 1320 },
-    "referenceEmptyWeight": { "value": 384.0, "unit": "kg" },
-    "referenceEmptyCG":     { "value": 23.6,  "unit": "percent_mac" },
+    "referenceEmptyWeight": { "value": 370,   "unit": "kg" },
+    "referenceEmptyCG":     { "value": 23.2,  "unit": "percent_mac" },
     "baggageMaxWeight":     { "value": 15,    "unit": "kg", "note": "Combined front + rear max 15 kg" },
     "maxCrosswind":         { "value": 15,    "unit": "kt" }
   },
