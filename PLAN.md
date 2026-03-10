@@ -1372,7 +1372,7 @@ flight-perf/
 | 3A.3 | **Profile validator** (`js/data/profile-validator.js`) — comprehensive validation with errors + warnings | 3A.2 | ✅ |
 | 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | ✅ |
 | 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 | ✅ |
-| 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 | |
+| 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 | ✅ |
 | 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 | |
 | 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 | |
 | 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 | 🔶 (db, validator, merger, migrator done) |
@@ -1726,8 +1726,8 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 | Total CSS files | 3 |
 | Total lines of JS | ~3,400 |
 | Total lines of CSS | ~830 |
-| Test files | 17 |
-| Test cases | 378 |
+| Test files | 18 |
+| Test cases | 399 |
 | Calculators | 8 |
 | Global unit types | 7 |
 | Fuel types supported | 6 |
