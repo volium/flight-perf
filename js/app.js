@@ -35,7 +35,7 @@ async function init() {
     console.error('Failed to load aircraft profile:', err);
   }
 
-  await initFleet(
+  const fleetApi = await initFleet(
     document.getElementById('fleet-selector'),
     document.getElementById('fleet-overlay'),
     document.getElementById('fleet-panel'),
@@ -46,7 +46,7 @@ async function init() {
   if (openFleetBtn) {
     openFleetBtn.addEventListener('click', () => {
       settingsApi?.close();
-      openFleetPanel();
+      fleetApi.open();
     });
   }
 
@@ -54,7 +54,7 @@ async function init() {
 
   // First run — no aircraft configured: open fleet panel automatically
   if (!state.profile) {
-    openFleetPanel();
+    fleetApi.open();
   }
 
   updateOnlineStatus();
@@ -122,13 +122,6 @@ async function registerServiceWorker() {
 
 export function getProfile() {
   return state.profile;
-}
-
-function openFleetPanel() {
-  const overlay = document.getElementById('fleet-overlay');
-  if (overlay) {
-    overlay.setAttribute('aria-hidden', 'false');
-  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

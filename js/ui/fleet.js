@@ -20,7 +20,7 @@ import { setActiveAircraft, getProfile, initCalculators } from '../app.js';
  * @param {HTMLElement} panelEl — the fleet panel inside the overlay
  */
 export async function initFleet(selectorEl, overlayEl, panelEl) {
-  if (!selectorEl || !overlayEl || !panelEl) return;
+  if (!selectorEl || !overlayEl || !panelEl) return { open() {} };
 
   const closeBtn = panelEl.querySelector('.fleet-panel__close');
 
@@ -43,6 +43,12 @@ export async function initFleet(selectorEl, overlayEl, panelEl) {
     }
   });
 
+  // Wire up the "Add Aircraft" button once (persists across re-renders)
+  const addBtn = panelEl.querySelector('.fleet-add-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => showAddForm(panelEl));
+  }
+
   // Header selector change handler
   selectorEl.addEventListener('change', async () => {
     const value = selectorEl.value;
@@ -59,6 +65,8 @@ export async function initFleet(selectorEl, overlayEl, panelEl) {
   });
 
   await refreshFleetSelector(selectorEl);
+
+  return { open, close };
 }
 
 /**
@@ -128,11 +136,6 @@ async function renderFleetList(panelEl) {
     }
   }
 
-  // "Add Aircraft" button
-  const addBtn = panelEl.querySelector('.fleet-add-btn');
-  if (addBtn) {
-    addBtn.onclick = () => showAddForm(panelEl);
-  }
 }
 
 function buildAircraftCard(instance, type, isActive, panelEl) {
