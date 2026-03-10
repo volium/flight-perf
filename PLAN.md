@@ -986,6 +986,8 @@ flight-perf/
 ├── index.html                  # Single-page app entry point
 ├── manifest.json               # PWA manifest
 ├── sw.js                       # Service worker
+├── package.json                # Dev dependencies (vitest)
+├── vitest.config.js            # Test runner configuration
 ├── PLAN.md                     # This document
 ├── README.md                   # Project overview & usage
 │
@@ -1030,6 +1032,24 @@ flight-perf/
 │       ├── fuel-types.js       # Built-in fuel type registry (100LL, MOGAS, Jet-A, etc.)
 │       ├── unit-preferences.js # Global unit preferences, conversion, smart rounding
 │       └── storage.js          # localStorage abstraction with prefix namespacing
+│
+├── tests/
+│   ├── engine/
+│   │   ├── interpolation.test.js   # 1D, table, 2D interpolation tests
+│   │   ├── margins.test.js         # Safety margin tests
+│   │   ├── units.test.js           # Unit conversion round-trip & formatting tests
+│   │   └── perf-common.test.js     # Reference table, distance, obstacle label tests
+│   ├── calc/
+│   │   ├── density-altitude.test.js # PA, ISA, DA, density ratio, full calc tests
+│   │   ├── crosswind.test.js       # Wind components, gusts, status tests
+│   │   ├── takeoff-landing.test.js  # Takeoff & landing reference table tests
+│   │   ├── climb.test.js           # Single-altitude & full climb plan tests
+│   │   ├── cruise.test.js          # 2D interpolation, fuel flow, endurance tests
+│   │   ├── weight-balance.test.js  # W&B, CG, %MAC, envelope, baggage tests
+│   │   └── fuel.test.js            # Fuel planning, density correction, reserve tests
+│   └── data/
+│       ├── fuel-types.test.js       # Fuel type registry tests
+│       └── unit-preferences.test.js # convertValue, smart rounding tests
 │
 ├── profiles/
 │   └── sling-lsa.json          # N246LT Sling LSA profile (POH data)
@@ -1085,7 +1105,7 @@ flight-perf/
 | 2.10 | Live fuel weight display in W&B and Fuel Planner | ✅ |
 | 2.11 | Mobile responsive fixes (header truncation, fuel row layout) | ✅ |
 | 2.12 | Input validation and error messaging improvements | |
-| 2.13 | Unit tests for interpolation, calculations, and margins | |
+| 2.13 | Unit tests for interpolation, calculations, and margins | ✅ |
 | 2.14 | Second aircraft profile (e.g., Cessna 172) to validate table_interpolation | |
 
 ### Phase 3 — Polish & Extensibility
@@ -1122,11 +1142,76 @@ flight-perf/
 
 ## 12. Testing Strategy
 
-### Unit Tests
+### Framework & Infrastructure
 
-- **Interpolation engine** — test 1D, 2D interpolation accuracy, edge cases (extrapolation clamping, exact matches).
-- **Each calculator module** — test against known POH values (expected input → expected output).
-- **Unit conversions** — round-trip conversion accuracy.
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| **Test runner** | Vitest | ES Module native, fast, zero-config for our stack |
+| **Assertions** | Vitest built-in (`expect`) | No extra dependency |
+| **Config** | `vitest.config.js` | Alias `@/` → `js/`, JSON imports enabled |
+| **NPM scripts** | `npm test`, `npm run test:watch` | Standard entry points |
+
+### Test Data Principles
+
+1. **POH-derived values** — All aviation test data uses actual Sling LSA POH figures. Tests serve as both correctness checks and documentation of expected behavior.
+2. **Known-answer tests** — Where formulas have well-known results (e.g., ISA temperature at sea level = 15 °C, standard pressure = 29.92 inHg), use those exact values.
+3. **Round-trip accuracy** — Unit conversions are tested for round-trip fidelity within floating-point tolerance.
+4. **Edge cases** — Every module tests boundary conditions: empty inputs, clamped ranges, zero values, missing data.
+5. **Tolerance** — Floating-point comparisons use `toBeCloseTo(expected, decimals)` where appropriate.
+
+### Test Structure
+
+```
+tests/
+├── engine/
+│   ├── interpolation.test.js   ─ 1D, table, 2D interpolation
+│   ├── margins.test.js         ─ Safety margin application
+│   ├── units.test.js           ─ All unit conversions & formatNumber
+│   └── perf-common.test.js     ─ Reference table calc, distance, obstacle label
+├── calc/
+│   ├── density-altitude.test.js ─ PA, ISA temp, DA, density ratio, full calc
+│   ├── crosswind.test.js       ─ Wind components, full crosswind with gusts
+│   ├── takeoff-landing.test.js  ─ Takeoff & landing (shared reference_table logic)
+│   ├── climb.test.js           ─ Single-altitude climb, full climb plan
+│   ├── cruise.test.js          ─ 2D cruise interpolation, fuel flow, endurance
+│   ├── weight-balance.test.js  ─ W&B, CG, %MAC, envelope check, baggage
+│   └── fuel.test.js            ─ Fuel planning, density correction, reserves
+└── data/
+    ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
+    └── unit-preferences.test.js ─ convertValue, smart rounding
+```
+
+### Module Test Coverage
+
+#### Engine Layer (pure math, no dependencies)
+
+| Module | Functions | Test Cases | Key Scenarios |
+|--------|-----------|------------|---------------|
+| `engine/interpolation.js` | `interpolate1D`, `interpolateFromTable`, `interpolate2D` | ~25 | Empty arrays, single point, exact match, midpoint, off-center, clamping (min/max), extrapolation, nested object accessor, unsorted data, 2D bilinear on Sling cruise grid |
+| `engine/margins.js` | `applyMargin`, `emptyMargins` | ~10 | No margin, percentage only, fixed only, roundUp only, combined (pct+fixed+round), description string, zero raw value |
+| `engine/units.js` | 14 conversion functions + `formatNumber` | ~20 | Each conversion pair forward & reverse, round-trip accuracy (e.g., kg→lbs→kg), temperature (known: 0°C=32°F, 100°C=212°F), `formatNumber` with null/NaN/valid |
+| `engine/perf-common.js` | `calcReferenceTable`, `getDistanceValue`, `formatObstacleLabel` | ~12 | Valid surface lookup, unknown surface → error, distance in native/converted units, obstacle label formatting (metric with ft, imperial) |
+
+#### Calc Layer (aviation logic, depends on engine)
+
+| Module | Functions | Test Cases | Key Scenarios |
+|--------|-----------|------------|---------------|
+| `calc/density-altitude.js` | `pressureAltitude`, `isaTemperature`, `densityAltitude`, `isaDeviation`, `densityRatio`, `calculateDensityAltitude` | ~18 | Sea level ISA (PA=0, DA=0, ISA=15°C), high altitude (10k ft), non-standard pressure, hot day (DA>PA), cold day (DA<PA), σ≈1.0 at SL, full calc with metric/imperial inputs |
+| `calc/crosswind.js` | `calculateWindComponents`, `calculateCrosswind` | ~15 | Direct headwind (0° angle), direct tailwind (180°), pure crosswind (90°), 45° angle, calm wind, gust handling, crosswind status (ok/caution/exceeds), reciprocal runway |
+| `calc/takeoff.js` + `calc/landing.js` | `calculateTakeoff`, `calculateLanding` | ~8 | Paved surface (Sling POH: GR=120m, TO=230m), grass surface, with margins, missing profile data → error, unsupported method → error |
+| `calc/climb.js` | `calculateClimb`, `calculateClimbPlan` | ~12 | ROC at sea level (800 fpm from POH), interpolated ROC at 1500 ft, full climb plan 0→6000 ft, cruise climb transition with speed factor, target below departure → error, ceiling detection |
+| `calc/cruise.js` | `calculateCruise` | ~8 | Exact data point (3000 ft, 5000 RPM → KIAS 98, KTAS 104), interpolated (4500 ft, 4900 RPM), fuel flow density correction, endurance & range calculation |
+| `calc/weight-balance.js` | `calculateWeightBalance` | ~12 | Normal loading within envelope, overweight detection, CG out of range, %MAC calculation (Sling: LEMAC 1366 mm, MAC 1339 mm), baggage constraint violation, fuel weight resolution (L→kg, gal→lbs), empty aircraft |
+| `calc/fuel.js` | `calculateFuelPlan` | ~10 | Standard trip (100 nm, 5000 RPM), density correction at altitude, insufficient fuel detection, reserve calculation, endurance & range, missing fuel data → error |
+
+#### Data Layer
+
+| Module | Functions | Test Cases | Key Scenarios |
+|--------|-----------|------------|---------------|
+| `data/fuel-types.js` | `getFuelType`, `getAllFuelTypes`, `fuelVolumeToWeight` | ~10 | Known types (100LL: 6.02 lbs/gal, 0.721 kg/L), unknown type → null, volume→weight for L/gal/kg/lbs, override density |
+| `data/unit-preferences.js` | `convertValue` (pure function) | ~15 | Altitude ft→m with smart rounding (5000→1525), m→ft, altimeter inHg→hPa (29.92→1013.2), temperature C→F (15→59), fuel gal→L, empty/null/NaN → '', same unit → unchanged |
+
+### Total: ~175 test cases across 13 test files
 
 ### Manual / Integration Tests
 
@@ -1303,6 +1388,8 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 | Total CSS files | 3 |
 | Total lines of JS | ~3,400 |
 | Total lines of CSS | ~830 |
+| Test files | 13 |
+| Test cases | 227 |
 | Calculators | 8 |
 | Global unit types | 7 |
 | Fuel types supported | 6 |
@@ -1328,4 +1415,4 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 ---
 
-*Last updated: 2026-03-07*
+*Last updated: 2026-03-10*
