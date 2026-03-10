@@ -1,0 +1,14 @@
+{
+  "name": "flight-perf",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Flight performance calculator for general aviation",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
