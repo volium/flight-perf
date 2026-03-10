@@ -1373,9 +1373,9 @@ flight-perf/
 | 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | ✅ |
 | 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 | ✅ |
 | 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 | ✅ |
-| 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 | |
-| 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 | |
-| 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 | 🔶 (db, validator, merger, migrator done) |
+| 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 | ✅ |
+| 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 | ✅ |
+| 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 | ✅ |
 
 #### Phase 3B — Fleet Management
 
@@ -1489,6 +1489,7 @@ tests/
     ├── profile-validator.test.js ─ Type profile + instance validation
     ├── profile-merger.test.js   ─ Type+instance merge, fallback, v1 compat
     ├── profile-migrator.test.js ─ v1→v2 migration, field mapping, isolation
+    ├── profile-loader.test.js  ─ IDB resolution, seeding, auto-create, legacy compat
     ├── fuel-types.test.js
     ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
     └── unit-preferences.test.js ─ convertValue, smart rounding
@@ -1525,11 +1526,12 @@ tests/
 | `data/profile-validator.js` | `validateTypeProfile`, `validateInstance` | ~60 | Valid minimal profile, null/invalid input, schemaVersion checks, all 4 required sections (aircraft, limits, fuel, speeds), optional W&B section (%MAC requirements, station validation, envelope polygon ≥3 points, baggage constraint refs), performance method/data checks, physics rules (MTOW>EW, Vs0<Vne, usable≤capacity), completeness warnings, instance validation |
 | `data/profile-merger.js` | `mergeProfile` | ~27 | Type+instance merge (tailNumber, emptyWeight, emptyCG, usefulLoad), fallback to type defaults, %MAC and arm CG formats, v1 backwards compat, deep clone isolation, instance metadata, edge cases (no W&B, no performance, no instance) |
 | `data/profile-migrator.js` | `migrateV1toV2`, `isV1Profile`, `isV2Profile` | ~37 | v1→v2 type conversion (schemaVersion, referenceEmptyWeight, referenceEmptyCG, remove usefulLoad), instance extraction (tailNumber→registration, emptyWeight, emptyCG), source tagging, no tailNumber→null instance, deep clone isolation, unique IDs, error handling |
+| `data/profile-loader.js` | `resolveProfile`, `resolveDefaultProfile`, `seedTypesFromData`, `autoCreateDefaultInstance`, `validateProfile` | ~16 | IDB-based profile resolution (instance+type→merge), default profile fallback, type seeding from data, auto-create instance from type defaults, legacy validateProfile compat |
 | `data/fuel-types.js`
 | `data/fuel-types.js` | `getFuelType`, `getAllFuelTypes`, `fuelVolumeToWeight` | ~10 | Known types (100LL: 6.02 lbs/gal, 0.721 kg/L), unknown type → null, volume→weight for L/gal/kg/lbs, override density |
 | `data/unit-preferences.js` | `convertValue` (pure function) | ~15 | Altitude ft→m with smart rounding (5000→1525), m→ft, altimeter inHg→hPa (29.92→1013.2), temperature C→F (15→59), fuel gal→L, empty/null/NaN → '', same unit → unchanged |
 
-### Total: ~378 test cases across 17 test files
+### Total: ~415 test cases across 19 test files
 
 ### Manual / Integration Tests
 
@@ -1726,8 +1728,8 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 | Total CSS files | 3 |
 | Total lines of JS | ~3,400 |
 | Total lines of CSS | ~830 |
-| Test files | 18 |
-| Test cases | 399 |
+| Test files | 19 |
+| Test cases | 415 |
 | Calculators | 8 |
 | Global unit types | 7 |
 | Fuel types supported | 6 |

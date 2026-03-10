@@ -8,10 +8,8 @@ import { initClimb } from './ui/climb.js';
 import { initCruise } from './ui/cruise.js';
 import { initWeightBalance } from './ui/weight-balance.js';
 import { initFuel } from './ui/fuel.js';
-import { loadProfile } from './data/profile-loader.js';
+import { seedBundledTypes, resolveActiveProfile, resolveProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
-
-const DEFAULT_PROFILE_URL = 'profiles/sling-lsa.json';
 
 const state = {
   profile: null,
@@ -30,8 +28,8 @@ async function init() {
   );
 
   try {
-    const profileUrl = storage.get('profileUrl', DEFAULT_PROFILE_URL);
-    state.profile = await loadProfile(profileUrl);
+    await seedBundledTypes();
+    state.profile = await resolveActiveProfile();
     updateAircraftDisplay(state.profile);
   } catch (err) {
     console.error('Failed to load aircraft profile:', err);
@@ -63,12 +61,30 @@ function updateAircraftDisplay(profile) {
   if (!el) return;
 
   if (profile) {
-    const tail = profile.aircraft.tailNumber || '';
-    const name = profile.aircraft.name || '';
+    const tail = profile.aircraft?.tailNumber || profile._instance?.registration || '';
+    const name = profile.aircraft?.name || '';
     el.textContent = tail ? `${tail} — ${name}` : name;
   } else {
     el.textContent = 'No aircraft loaded';
   }
+}
+
+/**
+ * Switch the active aircraft to a different instance.
+ * Loads the instance + type from IDB, merges, updates state, and re-inits calculators.
+ *
+ * @param {string} instanceId
+ * @returns {Promise<boolean>} true if switch succeeded
+ */
+export async function setActiveAircraft(instanceId) {
+  const profile = await resolveProfile(instanceId);
+  if (!profile) return false;
+
+  state.profile = profile;
+  storage.set('activeAircraftId', instanceId);
+  updateAircraftDisplay(profile);
+  initCalculators();
+  return true;
 }
 
 async function updateOnlineStatus() {
