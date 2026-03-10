@@ -50,6 +50,24 @@ body {
   margin-left: var(--space-sm);
 }
 
+.app-header__fleet-selector {
+  margin-left: var(--space-sm);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--border-radius);
+  color: inherit;
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  padding: 0.15rem 0.4rem;
+  max-width: 14rem;
+  cursor: pointer;
+}
+
+.app-header__fleet-selector option {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
 .app-header__actions {
   display: flex;
   align-items: center;
@@ -429,6 +447,146 @@ select.form-input {
   margin-bottom: var(--space-md);
   padding-bottom: var(--space-xs);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* ── Fleet Panel (overlay) ── */
+.fleet-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.fleet-overlay[aria-hidden="false"] {
+  display: block;
+}
+
+.fleet-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(28rem, 100vw);
+  background-color: var(--color-bg-panel);
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  padding: var(--space-lg);
+  z-index: 101;
+}
+
+.fleet-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+}
+
+.fleet-panel__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.fleet-empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-md) 0;
+}
+
+.fleet-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.fleet-card--active {
+  border-color: var(--color-primary);
+  background: var(--color-bg-panel-highlight, rgba(30, 58, 95, 0.05));
+}
+
+.fleet-card__reg {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+}
+
+.fleet-card__type {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.fleet-card__detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+.fleet-card__notes {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.fleet-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.fleet-card__badge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success, #22c55e);
+  padding: 0.1rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: var(--border-radius);
+}
+
+.fleet-add-btn {
+  margin-top: var(--space-md);
+}
+
+.fleet-form__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: var(--space-lg) 0 var(--space-md) 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.fleet-form__buttons {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.form-row .form-input {
+  flex: 1;
+}
+
+.form-input--unit {
+  flex: 0 0 5rem !important;
+}
+
+.btn-sm {
+  font-size: var(--font-size-xs);
+  padding: 0.2rem 0.5rem;
+}
+
+.btn-secondary {
+  background: var(--color-bg-input, #e5e7eb);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-border);
 }
 
 /* ── Form Optional Label ── */

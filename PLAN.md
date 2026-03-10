@@ -1379,12 +1379,12 @@ flight-perf/
 
 #### Phase 3B — Fleet Management
 
-| Task | Description | Depends On |
-|------|-------------|------------|
-| 3B.1 | **Fleet management UI** (`js/ui/fleet.js`) — list, add, edit, remove aircraft instances | 3A.* |
-| 3B.2 | **Header aircraft selector** — dropdown in header bar to switch active aircraft | 3B.1 |
-| 3B.3 | **First-run experience** — detect empty fleet, prompt to create first aircraft, auto-migrate v1 data | 3B.1, 3A.5 |
-| 3B.4 | **Aircraft switching** — on selection change: load merged profile, re-init calculators, update header, persist active ID | 3B.2, 3A.4 |
+| Task | Description | Depends On | Status |
+|------|-------------|------------|--------|
+| 3B.1 | **Fleet management UI** (`js/ui/fleet.js`) — list, add, edit, remove aircraft instances | 3A.* | ✅ |
+| 3B.2 | **Header aircraft selector** — dropdown in header bar to switch active aircraft | 3B.1 | ✅ |
+| 3B.3 | **First-run experience** — detect empty fleet, prompt to create first aircraft, auto-migrate v1 data | 3B.1, 3A.5 | ✅ |
+| 3B.4 | **Aircraft switching** — on selection change: load merged profile, re-init calculators, update header, persist active ID | 3B.2, 3A.4 | ✅ |
 
 #### Phase 3C — New Profiles
 
@@ -1724,7 +1724,7 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 | Category | Count |
 |----------|-------|
-| Total JS files | 31 |
+| Total JS files | 32 |
 | Total CSS files | 3 |
 | Total lines of JS | ~3,400 |
 | Total lines of CSS | ~830 |

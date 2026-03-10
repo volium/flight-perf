@@ -26,7 +26,9 @@
   <header class="app-header">
     <div class="app-header__title">
       FlightPerf
-      <span class="app-header__aircraft" id="aircraft-name">Loading…</span>
+      <select class="app-header__fleet-selector" id="fleet-selector" aria-label="Select aircraft">
+        <option>Loading…</option>
+      </select>
     </div>
     <div class="app-header__actions">
       <button class="btn-icon" id="btn-settings" aria-label="Settings" title="Settings">⚙</button>
@@ -82,6 +84,22 @@
 
   </main>
 
+  <!-- ── Fleet Management Overlay ── -->
+  <div class="fleet-overlay" id="fleet-overlay" aria-hidden="true">
+    <aside class="fleet-panel" id="fleet-panel" aria-label="Fleet Management">
+      <div class="fleet-panel__header">
+        <h2 class="fleet-panel__title">Fleet</h2>
+        <button class="btn-icon fleet-panel__close" aria-label="Close fleet panel">✕</button>
+      </div>
+
+      <div class="fleet-list" id="fleet-list"></div>
+
+      <button class="btn btn-block fleet-add-btn" id="fleet-add-btn">+ Add Aircraft</button>
+
+      <div class="fleet-form-area" id="fleet-form-area"></div>
+    </aside>
+  </div>
+
   <!-- ── Settings Overlay ── -->
   <div class="settings-overlay" id="settings-overlay" aria-hidden="true">
     <aside class="settings-panel" id="settings-panel" aria-label="Settings">
@@ -100,10 +118,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="setting-profile">Aircraft Profile</label>
-        <select class="form-input" id="setting-profile">
-          <option value="profiles/sling-lsa.json">Sling LSA — N246LT</option>
-        </select>
+        <label class="form-label">Aircraft</label>
+        <button class="btn btn-block btn-secondary" id="setting-open-fleet">✦ Manage Fleet…</button>
       </div>
 
       <div class="settings-section-label">Units</div>

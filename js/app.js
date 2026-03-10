@@ -1,5 +1,6 @@
 import { initTabs } from './ui/tabs.js';
 import { initSettings } from './ui/settings.js';
+import { initFleet, refreshFleetSelector } from './ui/fleet.js';
 import { initDensityAltitude } from './ui/density-altitude.js';
 import { initCrosswind } from './ui/crosswind.js';
 import { initTakeoff } from './ui/takeoff.js';
@@ -21,7 +22,7 @@ async function init() {
     document.getElementById('tab-panels'),
   );
 
-  initSettings(
+  const settingsApi = initSettings(
     document.getElementById('btn-settings'),
     document.getElementById('settings-overlay'),
     document.getElementById('settings-panel'),
@@ -30,10 +31,31 @@ async function init() {
   try {
     await seedBundledTypes();
     state.profile = await resolveActiveProfile();
-    updateAircraftDisplay(state.profile);
   } catch (err) {
     console.error('Failed to load aircraft profile:', err);
-    updateAircraftDisplay(null);
+  }
+
+  await initFleet(
+    document.getElementById('fleet-selector'),
+    document.getElementById('fleet-overlay'),
+    document.getElementById('fleet-panel'),
+  );
+
+  // "Manage Fleet" button in settings opens fleet panel
+  const openFleetBtn = document.getElementById('setting-open-fleet');
+  if (openFleetBtn) {
+    openFleetBtn.addEventListener('click', () => {
+      settingsApi?.close();
+      const fleetOverlay = document.getElementById('fleet-overlay');
+      if (fleetOverlay) {
+        fleetOverlay.setAttribute('aria-hidden', 'false');
+        // Trigger fleet list render
+        const panelEl = document.getElementById('fleet-panel');
+        if (panelEl) {
+          panelEl.querySelector('.fleet-panel__close')?.focus();
+        }
+      }
+    });
   }
 
   initCalculators();
@@ -56,19 +78,6 @@ export function initCalculators() {
   initFuel(document.getElementById('panel-fuel'));
 }
 
-function updateAircraftDisplay(profile) {
-  const el = document.getElementById('aircraft-name');
-  if (!el) return;
-
-  if (profile) {
-    const tail = profile.aircraft?.tailNumber || profile._instance?.registration || '';
-    const name = profile.aircraft?.name || '';
-    el.textContent = tail ? `${tail} — ${name}` : name;
-  } else {
-    el.textContent = 'No aircraft loaded';
-  }
-}
-
 /**
  * Switch the active aircraft to a different instance.
  * Loads the instance + type from IDB, merges, updates state, and re-inits calculators.
@@ -82,7 +91,7 @@ export async function setActiveAircraft(instanceId) {
 
   state.profile = profile;
   storage.set('activeAircraftId', instanceId);
-  updateAircraftDisplay(profile);
+  await refreshFleetSelector();
   initCalculators();
   return true;
 }
