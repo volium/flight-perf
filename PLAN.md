@@ -1370,12 +1370,12 @@ flight-perf/
 | 3A.1 | **IndexedDB abstraction** (`js/data/db.js`) — Promise-based CRUD for `types`, `fleet`, `syncMeta` stores | — | ✅ |
 | 3A.2 | **Type profile schema v2** — define structure, document required vs optional sections (`profiles/schema/type-profile-v2.md`) | — | ✅ |
 | 3A.3 | **Profile validator** (`js/data/profile-validator.js`) — comprehensive validation with errors + warnings | 3A.2 | ✅ |
-| 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | |
+| 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | ✅ |
 | 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 | |
 | 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 | |
 | 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 | |
 | 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 | |
-| 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 | 🔶 (db.js done) |
+| 3A.9 | **Unit tests** for db.js, profile-validator, profile-merger, profile-migrator | 3A.1–3A.5 | 🔶 (db, validator, merger done) |
 
 #### Phase 3B — Fleet Management
 
@@ -1487,6 +1487,8 @@ tests/
 └── data/
     ├── db.test.js               ─ IndexedDB CRUD for types, fleet, syncMeta
     ├── profile-validator.test.js ─ Type profile + instance validation
+    ├── profile-merger.test.js   ─ Type+instance merge, fallback, v1 compat
+    ├── fuel-types.test.js
     ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
     └── unit-preferences.test.js ─ convertValue, smart rounding
 ```
@@ -1520,10 +1522,12 @@ tests/
 |--------|-----------|------------|---------------|
 | `data/db.js` | `openDB`, `closeDB`, `getType`, `getAllTypes`, `getTypesBySource`, `putType`, `deleteType`, `clearTypes`, `getInstance`, `getAllInstances`, `getInstancesByType`, `putInstance`, `deleteInstance`, `clearFleet`, `getSyncMeta`, `putSyncMeta`, `deleteSyncMeta` | ~27 | Database open/create, CRUD round-trips for all 3 stores, index queries (source, typeId), overwrite semantics, delete missing key (safe), clear store, cross-store isolation |
 | `data/profile-validator.js` | `validateTypeProfile`, `validateInstance` | ~60 | Valid minimal profile, null/invalid input, schemaVersion checks, all 4 required sections (aircraft, limits, fuel, speeds), optional W&B section (%MAC requirements, station validation, envelope polygon ≥3 points, baggage constraint refs), performance method/data checks, physics rules (MTOW>EW, Vs0<Vne, usable≤capacity), completeness warnings, instance validation |
+| `data/profile-merger.js` | `mergeProfile` | ~27 | Type+instance merge (tailNumber, emptyWeight, emptyCG, usefulLoad), fallback to type defaults, %MAC and arm CG formats, v1 backwards compat, deep clone isolation, instance metadata, edge cases (no W&B, no performance, no instance) |
+| `data/fuel-types.js`
 | `data/fuel-types.js` | `getFuelType`, `getAllFuelTypes`, `fuelVolumeToWeight` | ~10 | Known types (100LL: 6.02 lbs/gal, 0.721 kg/L), unknown type → null, volume→weight for L/gal/kg/lbs, override density |
 | `data/unit-preferences.js` | `convertValue` (pure function) | ~15 | Altitude ft→m with smart rounding (5000→1525), m→ft, altimeter inHg→hPa (29.92→1013.2), temperature C→F (15→59), fuel gal→L, empty/null/NaN → '', same unit → unchanged |
 
-### Total: ~314 test cases across 15 test files
+### Total: ~341 test cases across 16 test files
 
 ### Manual / Integration Tests
 
@@ -1716,12 +1720,12 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 | Category | Count |
 |----------|-------|
-| Total JS files | 29 |
+| Total JS files | 30 |
 | Total CSS files | 3 |
 | Total lines of JS | ~3,400 |
 | Total lines of CSS | ~830 |
-| Test files | 15 |
-| Test cases | 314 |
+| Test files | 16 |
+| Test cases | 341 |
 | Calculators | 8 |
 | Global unit types | 7 |
 | Fuel types supported | 6 |
