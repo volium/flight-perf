@@ -1298,6 +1298,8 @@ flight-perf/
 │       └── unit-preferences.test.js # convertValue, smart rounding tests
 │
 ├── profiles/
+│   ├── schema/
+│   │   └── type-profile-v2.md     # v2 schema reference (living document)
 │   └── types/                     # Aircraft type profiles (v2 format)
 │       ├── sling-lsa.json         # N246LT Sling LSA type profile
 │       └── cessna-172s.json       # Cessna 172S Skyhawk SP type profile
@@ -1366,7 +1368,7 @@ flight-perf/
 |------|-------------|------------|--------|
 | 3A.1 |
 | 3A.1 | **IndexedDB abstraction** (`js/data/db.js`) — Promise-based CRUD for `types`, `fleet`, `syncMeta` stores | — | ✅ |
-| 3A.2 | **Type profile schema v2** — define structure, document required vs optional sections | — | |
+| 3A.2 | **Type profile schema v2** — define structure, document required vs optional sections (`profiles/schema/type-profile-v2.md`) | — | ✅ |
 | 3A.3 | **Profile validator** (`js/data/profile-validator.js`) — comprehensive validation with errors + warnings | 3A.2 | |
 | 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | |
 | 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 | |
