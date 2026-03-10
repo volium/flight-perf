@@ -98,10 +98,10 @@ export async function resolveDefaultProfile() {
 /**
  * Resolve the active aircraft profile.
  * Reads activeAircraftId from localStorage, loads from IDB, merges.
- * If no active aircraft is set or it can't be found, falls back to
- * auto-creating a default instance.
+ * Returns null if no active aircraft is set — the app should prompt
+ * the user to add one via the fleet panel.
  *
- * @returns {Promise<object>} Merged runtime profile
+ * @returns {Promise<object|null>} Merged runtime profile, or null
  */
 export async function resolveActiveProfile() {
   const activeId = storage.get('activeAircraftId', null);
@@ -110,6 +110,8 @@ export async function resolveActiveProfile() {
   if (activeId) {
     const profile = await resolveProfile(activeId);
     if (profile) return profile;
+    // Active ID references a deleted instance — clear it
+    storage.remove('activeAircraftId');
   }
 
   // No active instance — check if we need to auto-migrate from v1
@@ -119,15 +121,8 @@ export async function resolveActiveProfile() {
     if (profile) return profile;
   }
 
-  // No v1 data either — auto-create default instance from first bundled type
-  const instance = await autoCreateDefaultInstance();
-  if (instance) {
-    const profile = await resolveProfile(instance.instanceId);
-    if (profile) return profile;
-  }
-
-  // Last resort — type defaults with no instance
-  return resolveDefaultProfile();
+  // No aircraft configured — return null (fleet panel will prompt user)
+  return null;
 }
 
 // ─── Auto-creation ──────────────────────────────────────────────────────────

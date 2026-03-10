@@ -46,19 +46,16 @@ async function init() {
   if (openFleetBtn) {
     openFleetBtn.addEventListener('click', () => {
       settingsApi?.close();
-      const fleetOverlay = document.getElementById('fleet-overlay');
-      if (fleetOverlay) {
-        fleetOverlay.setAttribute('aria-hidden', 'false');
-        // Trigger fleet list render
-        const panelEl = document.getElementById('fleet-panel');
-        if (panelEl) {
-          panelEl.querySelector('.fleet-panel__close')?.focus();
-        }
-      }
+      openFleetPanel();
     });
   }
 
   initCalculators();
+
+  // First run — no aircraft configured: open fleet panel automatically
+  if (!state.profile) {
+    openFleetPanel();
+  }
 
   updateOnlineStatus();
   window.addEventListener('online', updateOnlineStatus);
@@ -125,6 +122,13 @@ async function registerServiceWorker() {
 
 export function getProfile() {
   return state.profile;
+}
+
+function openFleetPanel() {
+  const overlay = document.getElementById('fleet-overlay');
+  if (overlay) {
+    overlay.setAttribute('aria-hidden', 'false');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

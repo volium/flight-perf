@@ -79,22 +79,23 @@ export async function refreshFleetSelector(selectorEl) {
 
   if (instances.length === 0) {
     const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = 'No aircraft — open Fleet to add one';
+    opt.value = '_manage';
+    opt.textContent = '✦ Add your aircraft…';
     selectorEl.appendChild(opt);
-  } else {
-    for (const inst of instances) {
-      const typeName = typeMap[inst.typeId]?.aircraft?.name || inst.typeId;
-      const label = inst.registration
-        ? `${inst.registration} — ${typeName}`
-        : `${inst.displayName || typeName}`;
+    return;
+  }
 
-      const opt = document.createElement('option');
-      opt.value = inst.instanceId;
-      opt.textContent = label;
-      if (inst.instanceId === activeId) opt.selected = true;
-      selectorEl.appendChild(opt);
-    }
+  for (const inst of instances) {
+    const typeName = typeMap[inst.typeId]?.aircraft?.name || inst.typeId;
+    const label = inst.registration
+      ? `${inst.registration} — ${typeName}`
+      : `${inst.displayName || typeName}`;
+
+    const opt = document.createElement('option');
+    opt.value = inst.instanceId;
+    opt.textContent = label;
+    if (inst.instanceId === activeId) opt.selected = true;
+    selectorEl.appendChild(opt);
   }
 
   // "Manage Fleet…" option
