@@ -137,3 +137,43 @@ export function interpolate2D(data, var1Key, var2Key, resultKey, var1Value, var2
   // Now interpolate the intermediate results along var1
   return interpolate1D(intermediateXs, intermediateYs, var1Value, opts);
 }
+
+/**
+ * 3D trilinear interpolation from a flat table of data points
+ * using three independent variables.
+ *
+ * Groups by the first variable, performs 2D interpolation (var2 × var3)
+ * within each group, then interpolates the intermediate results along var1.
+ *
+ * @param {object[]} data    – Flat array of data point objects
+ * @param {string} var1Key   – Key for the first variable (outer, e.g., "weight")
+ * @param {string} var2Key   – Key for the second variable (middle, e.g., "pressureAltitude")
+ * @param {string} var3Key   – Key for the third variable (inner, e.g., "temperature")
+ * @param {string} resultKey – Key for the dependent variable (e.g., "groundRoll")
+ * @param {number} var1Value – Value for the first variable
+ * @param {number} var2Value – Value for the second variable
+ * @param {number} var3Value – Value for the third variable
+ * @param {function} [getVal] – Optional accessor for nested values
+ * @param {object}   [opts]   – Options passed through to interpolate1D
+ * @returns {{ value: number, clamped: boolean, clampedTo: string|null, extrapolated: boolean }}
+ */
+export function interpolate3D(data, var1Key, var2Key, var3Key, resultKey, var1Value, var2Value, var3Value, getVal, opts) {
+  const accessor = getVal || ((obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj);
+
+  // Get unique sorted values for var1 (outermost variable)
+  const var1Set = [...new Set(data.map((d) => accessor(d[var1Key])))].sort((a, b) => a - b);
+
+  // For each var1 level, perform 2D interpolation on var2 × var3
+  const intermediateXs = [];
+  const intermediateYs = [];
+
+  for (const v1 of var1Set) {
+    const subset = data.filter((d) => accessor(d[var1Key]) === v1);
+    const interp2d = interpolate2D(subset, var2Key, var3Key, resultKey, var2Value, var3Value, getVal, opts);
+    intermediateXs.push(v1);
+    intermediateYs.push(interp2d.value);
+  }
+
+  // Interpolate the intermediate results along var1
+  return interpolate1D(intermediateXs, intermediateYs, var1Value, opts);
+}

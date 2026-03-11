@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { interpolate1D, interpolateFromTable, interpolate2D } from '@/engine/interpolation.js';
+import { interpolate1D, interpolateFromTable, interpolate2D, interpolate3D } from '@/engine/interpolation.js';
 
 // ─── interpolate1D ──────────────────────────────────────────────────────────
 
@@ -216,5 +216,122 @@ describe('interpolate2D', () => {
     // Should clamp to max altitude (6000) and max RPM (5500) → 115
     expect(r.value).toBe(115);
     expect(r.clamped).toBe(true);
+  });
+});
+
+// ─── interpolate3D ──────────────────────────────────────────────────────────
+
+describe('interpolate3D', () => {
+  // Cessna 172S takeoff distance subset: weight × altitude × temperature → groundRoll
+  // Extracted from POH short-field takeoff tables
+  const takeoffData = [
+    // 2200 lbs
+    { weight: 2200, pressureAltitude: 0,    temperature: 0,  groundRoll: 610 },
+    { weight: 2200, pressureAltitude: 0,    temperature: 20, groundRoll: 705 },
+    { weight: 2200, pressureAltitude: 0,    temperature: 40, groundRoll: 815 },
+    { weight: 2200, pressureAltitude: 4000, temperature: 0,  groundRoll: 870 },
+    { weight: 2200, pressureAltitude: 4000, temperature: 20, groundRoll: 1010 },
+    { weight: 2200, pressureAltitude: 4000, temperature: 40, groundRoll: 1165 },
+    // 2550 lbs
+    { weight: 2550, pressureAltitude: 0,    temperature: 0,  groundRoll: 860 },
+    { weight: 2550, pressureAltitude: 0,    temperature: 20, groundRoll: 995 },
+    { weight: 2550, pressureAltitude: 0,    temperature: 40, groundRoll: 1150 },
+    { weight: 2550, pressureAltitude: 4000, temperature: 0,  groundRoll: 1235 },
+    { weight: 2550, pressureAltitude: 4000, temperature: 20, groundRoll: 1440 },
+    { weight: 2550, pressureAltitude: 4000, temperature: 40, groundRoll: 1660 },
+  ];
+
+  it('returns exact value at a grid point (2550 lbs, 0 ft, 20°C → 995)', () => {
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2550, 0, 20,
+    );
+    expect(r.value).toBe(995);
+  });
+
+  it('returns exact value at another grid point (2200 lbs, 4000 ft, 0°C → 870)', () => {
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2200, 4000, 0,
+    );
+    expect(r.value).toBe(870);
+  });
+
+  it('interpolates along weight axis (midpoint of 2200 and 2550 at 0 ft, 0°C)', () => {
+    // 2200→610, 2550→860, midpoint 2375 → (610+860)/2 = 735
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2375, 0, 0,
+    );
+    expect(r.value).toBe(735);
+  });
+
+  it('interpolates along altitude axis (midpoint of 0 and 4000 at 2550 lbs, 20°C)', () => {
+    // 0ft→995, 4000ft→1440, midpoint 2000 → (995+1440)/2 = 1217.5
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2550, 2000, 20,
+    );
+    expect(r.value).toBe(1217.5);
+  });
+
+  it('interpolates along temperature axis (midpoint of 0 and 20 at 2550 lbs, 0 ft)', () => {
+    // 0°C→860, 20°C→995, midpoint 10 → (860+995)/2 = 927.5
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2550, 0, 10,
+    );
+    expect(r.value).toBe(927.5);
+  });
+
+  it('interpolates across all three axes simultaneously', () => {
+    // 2375 lbs (mid-weight), 2000 ft (mid-alt), 10°C (mid-temp)
+    // At 2200: 2D interp at 2000ft/10°C
+    //   alt=0: (610+705)/2=657.5, alt=4000: (870+1010)/2=940
+    //   at 2000ft: (657.5+940)/2 = 798.75
+    // At 2550: 2D interp at 2000ft/10°C
+    //   alt=0: (860+995)/2=927.5, alt=4000: (1235+1440)/2=1337.5
+    //   at 2000ft: (927.5+1337.5)/2 = 1132.5
+    // At 2375: (798.75+1132.5)/2 = 965.625
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2375, 2000, 10,
+    );
+    expect(r.value).toBeCloseTo(965.625, 1);
+  });
+
+  it('clamps when all axes exceed range', () => {
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      3000, 8000, 50,
+    );
+    // Clamps to max weight (2550), max alt (4000), max temp (40) → 1660
+    expect(r.value).toBe(1660);
+    expect(r.clamped).toBe(true);
+  });
+
+  it('clamps below minimum on all axes', () => {
+    const r = interpolate3D(
+      takeoffData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      1800, -1000, -20,
+    );
+    // Clamps to min weight (2200), min alt (0), min temp (0) → 610
+    expect(r.value).toBe(610);
+    expect(r.clamped).toBe(true);
+  });
+
+  it('works with nested ValueWithUnit objects', () => {
+    const nestedData = [
+      { weight: { value: 2200 }, pressureAltitude: { value: 0 }, temperature: { value: 0 }, groundRoll: { value: 610 } },
+      { weight: { value: 2200 }, pressureAltitude: { value: 0 }, temperature: { value: 20 }, groundRoll: { value: 705 } },
+      { weight: { value: 2550 }, pressureAltitude: { value: 0 }, temperature: { value: 0 }, groundRoll: { value: 860 } },
+      { weight: { value: 2550 }, pressureAltitude: { value: 0 }, temperature: { value: 20 }, groundRoll: { value: 995 } },
+    ];
+    const r = interpolate3D(
+      nestedData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
+      2375, 0, 10,
+    );
+    // mid-weight, mid-temp: ((610+705)/2 + (860+995)/2) / 2 = (657.5+927.5)/2 = 792.5
+    expect(r.value).toBeCloseTo(792.5, 1);
   });
 });
