@@ -25,14 +25,20 @@ export async function initFleet(selectorEl, overlayEl, panelEl) {
   if (!selectorEl || !overlayEl || !panelEl) return { open() {} };
 
   const closeBtn = panelEl.querySelector('.fleet-panel__close');
+  let returnToSettings = null;
 
-  function open() {
+  function open(onClose) {
+    returnToSettings = onClose || null;
     renderFleetList(panelEl);
     overlayEl.setAttribute('aria-hidden', 'false');
   }
 
   function close() {
     overlayEl.setAttribute('aria-hidden', 'true');
+    if (returnToSettings) {
+      returnToSettings();
+      returnToSettings = null;
+    }
   }
 
   closeBtn?.addEventListener('click', close);
@@ -122,7 +128,7 @@ async function renderFleetList(panelEl) {
   listEl.innerHTML = '';
 
   if (instances.length === 0) {
-    listEl.innerHTML = '<p class="fleet-empty">No aircraft in your fleet yet. Add one below.</p>';
+    listEl.innerHTML = '<p class="fleet-empty">No aircraft in your fleet yet.</p>';
   } else {
     for (const inst of instances) {
       const type = typeMap[inst.typeId];
@@ -225,6 +231,11 @@ async function showAddForm(panelEl) {
   const formArea = panelEl.querySelector('.fleet-form-area');
   if (!formArea) return;
 
+  const listEl = panelEl.querySelector('.fleet-list');
+  const addBtn = panelEl.querySelector('.fleet-add-btn');
+  if (listEl) listEl.style.display = 'none';
+  if (addBtn) addBtn.style.display = 'none';
+
   const types = await getAllTypes();
 
   renderForm(formArea, types, {
@@ -233,25 +244,34 @@ async function showAddForm(panelEl) {
     instance: null,
   });
 
-  formArea.querySelector('#fleet-save').addEventListener('click', async () => {
-    const selectedType = getSelectedType(formArea, types);
-    const instance = buildInstanceFromForm(formArea, null);
-    if (!instance) return;
-    await putInstance(instance);
-    await setActiveAircraft(instance.instanceId);
-    await refreshFleetSelector();
-    formArea.innerHTML = '';
-    renderFleetList(panelEl);
-  });
+    formArea.querySelector('#fleet-save').addEventListener('click', async () => {
+      const selectedType = getSelectedType(formArea, types);
+      const instance = buildInstanceFromForm(formArea, null);
+      if (!instance) return;
+      await putInstance(instance);
+      await setActiveAircraft(instance.instanceId);
+      await refreshFleetSelector();
+      formArea.innerHTML = '';
+      if (listEl) listEl.style.display = '';
+      if (addBtn) addBtn.style.display = '';
+      renderFleetList(panelEl);
+    });
 
-  formArea.querySelector('#fleet-cancel').addEventListener('click', () => {
-    formArea.innerHTML = '';
-  });
-}
+    formArea.querySelector('#fleet-cancel').addEventListener('click', () => {
+      formArea.innerHTML = '';
+      if (listEl) listEl.style.display = '';
+      if (addBtn) addBtn.style.display = '';
+    });
+  }
 
 async function showEditForm(panelEl, existing) {
   const formArea = panelEl.querySelector('.fleet-form-area');
   if (!formArea) return;
+
+  const listEl = panelEl.querySelector('.fleet-list');
+  const addBtn = panelEl.querySelector('.fleet-add-btn');
+  if (listEl) listEl.style.display = 'none';
+  if (addBtn) addBtn.style.display = 'none';
 
   const types = await getAllTypes();
 
@@ -273,11 +293,15 @@ async function showEditForm(panelEl, existing) {
 
     await refreshFleetSelector();
     formArea.innerHTML = '';
+    if (listEl) listEl.style.display = '';
+    if (addBtn) addBtn.style.display = '';
     renderFleetList(panelEl);
   });
 
   formArea.querySelector('#fleet-cancel').addEventListener('click', () => {
     formArea.innerHTML = '';
+    if (listEl) listEl.style.display = '';
+    if (addBtn) addBtn.style.display = '';
   });
 }
 

@@ -46,7 +46,7 @@ async function init() {
   if (openFleetBtn) {
     openFleetBtn.addEventListener('click', () => {
       settingsApi?.close();
-      fleetApi.open();
+      fleetApi.open(() => settingsApi?.open());
     });
   }
 

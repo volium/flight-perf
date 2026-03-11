@@ -549,7 +549,7 @@ select.form-input {
 }
 
 .fleet-add-btn {
-  margin-top: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .fleet-form__title {
