@@ -3,10 +3,10 @@ import { mergeProfile } from '@/data/profile-merger.js';
 
 // ─── Test fixtures ──────────────────────────────────────────────────────────
 
-/** v2 type profile (Sling LSA style — %MAC CG) */
+/** Type profile (Sling LSA style — %MAC CG) */
 function slingType() {
   return {
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: {
       id: 'sling-lsa',
       name: 'Sling LSA',
@@ -60,10 +60,10 @@ function slingType() {
   };
 }
 
-/** v2 type profile (Cessna style — arm-based CG) */
+/** Type profile (Cessna style — arm-based CG) */
 function cessnaType() {
   return {
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: {
       id: 'cessna-172s',
       name: 'Cessna 172S Skyhawk SP',
@@ -165,7 +165,7 @@ describe('mergeProfile — basic merge', () => {
 
   it('preserves all type profile data', () => {
     const m = mergeProfile(slingType(), slingInstance());
-    expect(m.schemaVersion).toBe('2.0');
+    expect(m.schemaVersion).toBe('1.0');
     expect(m.aircraft.name).toBe('Sling LSA');
     expect(m.aircraft.manufacturer).toBe('Sling Aircraft');
     expect(m.fuel.type).toBe('100LL');
@@ -233,56 +233,6 @@ describe('mergeProfile — instance without overrides', () => {
   it('still sets tailNumber from instance', () => {
     const inst = { instanceId: 'x', typeId: 'sling-lsa', registration: 'N999XX' };
     const m = mergeProfile(slingType(), inst);
-    expect(m.aircraft.tailNumber).toBe('N999XX');
-  });
-});
-
-// ─── v1 backwards compatibility ─────────────────────────────────────────────
-
-describe('mergeProfile — v1 type profile', () => {
-  function v1Type() {
-    return {
-      profileVersion: '1.0',
-      aircraft: {
-        id: 'sling-lsa',
-        name: 'Sling LSA',
-        tailNumber: 'N246LT',
-        manufacturer: 'Sling Aircraft',
-      },
-      limits: {
-        maxTakeoffWeight: { value: 600, unit: 'kg' },
-        maxLandingWeight: { value: 600, unit: 'kg' },
-        emptyWeight: { value: 384, unit: 'kg' },
-        usefulLoad: { value: 216, unit: 'kg' },
-      },
-      fuel: { type: '100LL', inputUnit: 'us_gal', capacity: { value: 150, unit: 'L' } },
-      speeds: { vne: { value: 135, unit: 'kias' }, vs0: { value: 40, unit: 'kias' } },
-      weightBalance: {
-        cgReference: 'percent_mac',
-        emptyCG: { value: 23.6, unit: 'percent_mac' },
-        stations: [],
-        envelopes: [{ id: 'normal', name: 'Normal', color: '#22c55e', points: [{ weight: 384, cg: 20 }, { weight: 384, cg: 33 }, { weight: 600, cg: 33 }] }],
-      },
-    };
-  }
-
-  it('uses v1 emptyWeight when referenceEmptyWeight absent', () => {
-    const m = mergeProfile(v1Type(), null);
-    expect(m.limits.emptyWeight.value).toBe(384);
-  });
-
-  it('uses v1 weightBalance.emptyCG when referenceEmptyCG absent', () => {
-    const m = mergeProfile(v1Type(), null);
-    expect(m.weightBalance.emptyCG.value).toBe(23.6);
-  });
-
-  it('instance overrides v1 emptyWeight', () => {
-    const inst = {
-      instanceId: 'x', typeId: 'sling-lsa', registration: 'N999XX',
-      emptyWeight: { value: 390, unit: 'kg' },
-    };
-    const m = mergeProfile(v1Type(), inst);
-    expect(m.limits.emptyWeight.value).toBe(390);
     expect(m.aircraft.tailNumber).toBe('N999XX');
   });
 });

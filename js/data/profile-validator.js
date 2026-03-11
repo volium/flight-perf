@@ -82,8 +82,8 @@ export function validateInstance(instance) {
 function validateSchemaVersion(profile, errors) {
   if (profile.schemaVersion == null && profile.profileVersion == null) {
     errors.push(issue('schemaVersion', 'Missing schemaVersion field', 'structure'));
-  } else if (profile.schemaVersion && profile.schemaVersion !== '2.0') {
-    errors.push(issue('schemaVersion', `Expected "2.0", got "${profile.schemaVersion}"`, 'structure'));
+  } else if (profile.schemaVersion && profile.schemaVersion !== '1.0') {
+    errors.push(issue('schemaVersion', `Expected "1.0", got "${profile.schemaVersion}"`, 'structure'));
   }
 }
 

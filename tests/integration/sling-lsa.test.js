@@ -14,50 +14,50 @@ function loadJSON(path) {
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
-// ─── v2 bundled profile validation ──────────────────────────────────────────
+// ─── Bundled profile validation ──────────────────────────────────────────
 
-describe('Sling LSA v2 type profile', () => {
-  const v2Profile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
+describe('Sling LSA type profile', () => {
+  const profile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
 
-  it('is detected as v2 format', () => {
-    expect(v2Profile.schemaVersion).toBe('2.0');
+  it('has correct schemaVersion', () => {
+    expect(profile.schemaVersion).toBe('1.0');
   });
 
-  it('passes v2 validation with no errors', () => {
-    const result = validateTypeProfile(v2Profile);
+  it('passes validation with no errors', () => {
+    const result = validateTypeProfile(profile);
     expect(result.errors).toEqual([]);
     expect(result.valid).toBe(true);
   });
 
   it('has correct schemaVersion and typeId', () => {
-    expect(v2Profile.schemaVersion).toBe('2.0');
-    expect(v2Profile.typeId).toBe('sling-lsa');
-    expect(v2Profile.source).toBe('bundled');
+    expect(profile.schemaVersion).toBe('1.0');
+    expect(profile.typeId).toBe('sling-lsa');
+    expect(profile.source).toBe('bundled');
   });
 
-  it('has referenceEmptyWeight (not v1 emptyWeight)', () => {
-    expect(v2Profile.limits.referenceEmptyWeight).toEqual({ value: 370, unit: 'kg' });
-    expect(v2Profile.limits.emptyWeight).toBeUndefined();
+  it('has referenceEmptyWeight', () => {
+    expect(profile.limits.referenceEmptyWeight).toEqual({ value: 370, unit: 'kg' });
+    expect(profile.limits.emptyWeight).toBeUndefined();
   });
 
-  it('has no referenceEmptyCG (POH does not specify standard CG)', () => {
-    expect(v2Profile.limits.referenceEmptyCG).toEqual({ value: 23.2, unit: 'percent_mac' });
-    expect(v2Profile.weightBalance.emptyCG).toBeUndefined();
+  it('has referenceEmptyCG', () => {
+    expect(profile.limits.referenceEmptyCG).toEqual({ value: 23.2, unit: 'percent_mac' });
+    expect(profile.weightBalance.emptyCG).toBeUndefined();
   });
 
   it('has no usefulLoad (computed at runtime)', () => {
-    expect(v2Profile.limits.usefulLoad).toBeUndefined();
+    expect(profile.limits.usefulLoad).toBeUndefined();
   });
 
   it('has no tailNumber (moved to instance)', () => {
-    expect(v2Profile.aircraft.tailNumber).toBeUndefined();
+    expect(profile.aircraft.tailNumber).toBeUndefined();
   });
 });
 
 // ─── Merged profile compatibility with calc modules ─────────────────────────
 
-describe('Sling LSA v2 merged profile — calc module compatibility', () => {
-  const v2Profile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
+describe('Sling LSA merged profile — calc module compatibility', () => {
+  const typeProfile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
   const instance = {
     instanceId: 'test-inst',
     typeId: 'sling-lsa',
@@ -66,7 +66,7 @@ describe('Sling LSA v2 merged profile — calc module compatibility', () => {
     emptyCG: { value: 23.6, unit: 'percent_mac' },
   };
 
-  const merged = mergeProfile(v2Profile, instance);
+  const merged = mergeProfile(typeProfile, instance);
 
   it('merged profile has tailNumber', () => {
     expect(merged.aircraft.tailNumber).toBe('N246LT');
@@ -126,9 +126,9 @@ describe('Sling LSA v2 merged profile — calc module compatibility', () => {
 
 // ─── Merged profile without instance (type defaults only) ───────────────────
 
-describe('Sling LSA v2 merged profile — no instance', () => {
-  const v2Profile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
-  const merged = mergeProfile(v2Profile, null);
+describe('Sling LSA merged profile — no instance', () => {
+  const typeProfile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
+  const merged = mergeProfile(typeProfile, null);
 
   it('uses referenceEmptyWeight as emptyWeight', () => {
     expect(merged.limits.emptyWeight.value).toBe(370);

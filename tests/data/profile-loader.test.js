@@ -13,7 +13,7 @@ import {
 
 function slingV2Type() {
   return {
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     typeId: 'sling-lsa',
     source: 'bundled',
     aircraft: { id: 'sling-lsa', name: 'Sling LSA', manufacturer: 'Sling Aircraft' },
@@ -150,7 +150,7 @@ describe('seedTypesFromData', () => {
   });
 
   it('skips profiles without typeId or aircraft.id', async () => {
-    await seedTypesFromData([{ schemaVersion: '2.0' }]);
+    await seedTypesFromData([{ schemaVersion: '1.0' }]);
     const profile = await resolveDefaultProfile();
     expect(profile).toBeNull();
   });

@@ -67,21 +67,21 @@ describe('types store', () => {
   const slingType = {
     typeId: 'sling-lsa',
     source: 'bundled',
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: { id: 'sling-lsa', name: 'Sling LSA', manufacturer: 'Sling Aircraft' },
   };
 
   const cessnaType = {
     typeId: 'cessna-172s',
     source: 'bundled',
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: { id: 'cessna-172s', name: 'Cessna 172S Skyhawk SP', manufacturer: 'Cessna' },
   };
 
   const customType = {
     typeId: 'rv-7',
     source: 'custom',
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: { id: 'rv-7', name: 'Van\'s RV-7', manufacturer: 'Van\'s Aircraft' },
   };
 

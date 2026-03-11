@@ -176,7 +176,7 @@ export async function loadProfile(url) {
   const profile = await response.json();
 
   // v2 profiles: validate with new validator
-  if (profile.schemaVersion === '2.0') {
+  if (profile.schemaVersion === '1.0') {
     const validation = validateTypeProfile(profile);
     if (!validation.valid) {
       throw new Error(`Invalid v2 profile:\n${validation.errors.map((e) => e.message).join('\n')}`);
@@ -194,7 +194,7 @@ export async function loadProfile(url) {
 
 /** @deprecated Use profile-validator.js validateTypeProfile() instead. */
 export function validateProfile(profile) {
-  if (profile?.schemaVersion === '2.0') {
+  if (profile?.schemaVersion === '1.0') {
     const result = validateTypeProfile(profile);
     return { valid: result.valid, errors: result.errors.map((e) => e.message) };
   }

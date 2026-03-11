@@ -1,4 +1,4 @@
-# Aircraft Type Profile — Schema v2
+# Aircraft Type Profile — Schema v1
 
 > **Living document** — this schema evolves as new aircraft profiles are added and new patterns emerge.
 > When adding a profile that requires fields not yet in this schema, update this document first,
@@ -6,7 +6,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Schema version** | 2.0 |
+| **Schema version** | 1.0 |
 | **Status** | Active — used by validator, merger, migrator |
 | **Created** | 2026-03-10 |
 | **Last updated** | 2026-03-10 |
@@ -123,7 +123,7 @@ All fields are optional. This is descriptive metadata — not used in calculatio
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `schemaVersion` | `string` | ✅ | Must be `"2.0"` |
+| `schemaVersion` | `string` | ✅ | Must be `"1.0"` |
 | `source` | `string` | ✅ | `"bundled"` or `"custom"` — set by the app, not authored manually |
 | `aircraft` | `object` | ✅ | Aircraft identification — see [Section 4](#4-aircraft--required) |
 | `limits` | `object` | ✅ | Weight limits and reference weights — see [Section 5](#5-limits--required) |
@@ -512,7 +512,7 @@ Matches the CG reference system of the linked type profile:
 
 | v1 Location | v2 Location | Change |
 |-------------|-------------|--------|
-| `profileVersion: "1.0"` | `schemaVersion: "2.0"` | Renamed |
+| `profileVersion: "1.0"` | `schemaVersion: "1.0"` | Renamed |
 | `aircraft.tailNumber` | *(removed from type)* | Moved to instance `registration` |
 | `limits.emptyWeight` | `limits.referenceEmptyWeight` | Renamed — now a reference default |
 | `limits.usefulLoad` | *(removed)* | Computed at runtime: `MTOW − emptyWeight` |
@@ -577,8 +577,8 @@ Fuel flow fields use fixed naming (`fuelFlowLph`, `fuelFlowGph`) rather than a u
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2026-03-10 | 2.0 | Initial v2 schema. Type/instance split. `referenceEmptyWeight`, `referenceEmptyCG` added. `tailNumber`, `usefulLoad` removed from type. `source` field added. |
-| 2026-03-11 | 2.0.1 | Standardized `table_interpolation` data format: plain numbers in data arrays, units declared at section level via `units` object. Removed ValueWithUnit pattern from data arrays. Added `units` field to performance sections. Flattened fuel consumption `endurance` from `{hours, minutes}` to `enduranceHours`/`enduranceMinutes` plain fields. |
+| 2026-03-10 | 1.0 | Initial schema. Type/instance split. `referenceEmptyWeight`, `referenceEmptyCG`. `source` field. |
+| 2026-03-11 | 1.0.1 | Standardized `table_interpolation` data format: plain numbers in data arrays, units declared at section level via `units` object. Removed ValueWithUnit pattern from data arrays. Added `units` field to performance sections. Flattened fuel consumption `endurance` from `{hours, minutes}` to `enduranceHours`/`enduranceMinutes` plain fields. |
 
 > **Future additions anticipated:** When adding the Cessna 172S profile, we expect to add or refine:
 > - `table_interpolation` data patterns for takeoff/landing (altitude × temperature grids)

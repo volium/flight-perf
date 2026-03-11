@@ -6,7 +6,7 @@ import { validateTypeProfile, validateInstance } from '@/data/profile-validator.
 /** Minimal valid v2 type profile — all required sections, nothing optional */
 function minimalValidProfile() {
   return {
-    schemaVersion: '2.0',
+    schemaVersion: '1.0',
     aircraft: {
       id: 'test-aircraft',
       name: 'Test Aircraft',
@@ -120,12 +120,12 @@ describe('validateTypeProfile — schemaVersion', () => {
 
   it('errors when schemaVersion is wrong value', () => {
     const p = minimalValidProfile();
-    p.schemaVersion = '1.0';
+    p.schemaVersion = '99.0';
     const r = validateTypeProfile(p);
     expect(hasError(r, 'schemaVersion')).toBe(true);
   });
 
-  it('tolerates v1 profile with profileVersion (for migration)', () => {
+  it('tolerates profile with profileVersion (legacy field)', () => {
     const p = minimalValidProfile();
     delete p.schemaVersion;
     p.profileVersion = '1.0';
