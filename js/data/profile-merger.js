@@ -1,12 +1,14 @@
 /**
- * Profile merger — combines a v2 type profile with an aircraft instance
+ * Profile merger — combines a type profile with an aircraft instance
  * to produce a runtime profile compatible with the existing calc layer.
  *
- * The merged profile has the same shape that calc modules expect from a v1
- * profile, so zero changes are needed in any calc/ or ui/ module.
+ * The merged profile has the same shape that calc modules expect,
+ * so zero changes are needed in any calc/ or ui/ module.
  *
  * @module data/profile-merger
  */
+
+import { convert } from '../engine/units.js';
 
 /**
  * Merge a type profile with an aircraft instance to produce a runtime profile.
@@ -70,19 +72,16 @@ export function mergeProfile(typeProfile, instance) {
  * @returns {object|null} ValueWithUnit { value, unit }
  */
 function resolveEmptyWeight(type, instance) {
-  // Instance override takes priority
+  const typeWeightUnit = type.weightBalance?.weightUnit || type.limits?.referenceEmptyWeight?.unit || 'kg';
+
+  // Instance override takes priority — convert to type's weight unit if needed
   if (instance?.emptyWeight?.value != null) {
-    return instance.emptyWeight;
+    return convertWeightToUnit(instance.emptyWeight, typeWeightUnit);
   }
 
-  // v2: limits.referenceEmptyWeight
+  // limits.referenceEmptyWeight
   if (type.limits?.referenceEmptyWeight?.value != null) {
     return type.limits.referenceEmptyWeight;
-  }
-
-  // v1 fallback: limits.emptyWeight
-  if (type.limits?.emptyWeight?.value != null) {
-    return type.limits.emptyWeight;
   }
 
   return null;
@@ -101,15 +100,29 @@ function resolveEmptyCG(type, instance) {
     return instance.emptyCG;
   }
 
-  // v2: limits.referenceEmptyCG
+  // limits.referenceEmptyCG
   if (type.limits?.referenceEmptyCG != null) {
     return type.limits.referenceEmptyCG;
   }
 
-  // v1 fallback: weightBalance.emptyCG
-  if (type.weightBalance?.emptyCG != null) {
-    return type.weightBalance.emptyCG;
+  return null;
+}
+
+/**
+ * Convert a weight ValueWithUnit to the target unit.
+ * Returns a new object; does not mutate the input.
+ */
+function convertWeightToUnit(weight, targetUnit) {
+  if (!weight || weight.unit === targetUnit) return weight;
+
+  let converted;
+  if (weight.unit === 'lbs' && targetUnit === 'kg') {
+    converted = convert.lbsToKg(weight.value);
+  } else if (weight.unit === 'kg' && targetUnit === 'lbs') {
+    converted = convert.kgToLbs(weight.value);
+  } else {
+    return weight;
   }
 
-  return null;
+  return { value: Math.round(converted * 10) / 10, unit: targetUnit };
 }

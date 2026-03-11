@@ -289,11 +289,18 @@ async function showEditForm(panelEl, existing) {
  */
 function renderForm(formArea, types, { title, saveLabel, instance }) {
   const selectedTypeId = instance?.typeId || types[0]?.typeId || '';
+  const selectedType = types.find((t) => t.typeId === selectedTypeId);
+
+  // Determine units from the type profile
+  const typeWeightUnit = selectedType?.weightBalance?.weightUnit || 'kg';
+  const typeCGUnit = selectedType?.weightBalance?.cgUnit || 'in';
+  const typeCGLabel = typeCGUnit === '%' ? '% MAC' : typeCGUnit;
 
   // For edit: only show user-entered values (not null = not user-specified)
   const regValue = instance?.registration || '';
   const ewValue = instance?.emptyWeight?.value ?? '';
   const cgValue = instance?.emptyCG != null ? (instance.emptyCG.value ?? instance.emptyCG.arm ?? '') : '';
+  const ewUnitValue = instance?.emptyWeight?.unit || typeWeightUnit;
   const notesValue = instance?.notes || '';
 
   formArea.innerHTML = `
@@ -313,8 +320,8 @@ function renderForm(formArea, types, { title, saveLabel, instance }) {
       <div class="form-row">
         <input class="form-input" id="fleet-ew" type="number" step="any" value="${ewValue}">
         <select class="form-input form-input--unit" id="fleet-ew-unit">
-          <option value="lbs" ${instance?.emptyWeight?.unit === 'lbs' ? 'selected' : ''}>lbs</option>
-          <option value="kg" ${instance?.emptyWeight?.unit === 'kg' ? 'selected' : ''}>kg</option>
+          <option value="lbs" ${ewUnitValue === 'lbs' ? 'selected' : ''}>lbs</option>
+          <option value="kg" ${ewUnitValue === 'kg' ? 'selected' : ''}>kg</option>
         </select>
       </div>
     </div>
@@ -322,11 +329,8 @@ function renderForm(formArea, types, { title, saveLabel, instance }) {
       <label class="form-label" for="fleet-cg">Empty CG <span class="form-label--optional">(from weigh report)</span></label>
       <div class="form-row">
         <input class="form-input" id="fleet-cg" type="number" step="any" value="${cgValue}">
-        <select class="form-input form-input--unit" id="fleet-cg-unit">
-          <option value="in" ${instance?.emptyCG?.unit === 'in' ? 'selected' : ''}>in</option>
-          <option value="mm" ${instance?.emptyCG?.unit === 'mm' ? 'selected' : ''}>mm</option>
-          <option value="percent_mac" ${instance?.emptyCG?.unit === 'percent_mac' ? 'selected' : ''}>% MAC</option>
-        </select>
+        <span class="form-input form-input--unit-label" id="fleet-cg-unit-label">${esc(typeCGLabel)}</span>
+        <input type="hidden" id="fleet-cg-unit" value="${esc(typeCGUnit === '%' ? 'percent_mac' : typeCGUnit)}">
       </div>
     </div>
     <div class="form-group">
@@ -344,6 +348,8 @@ function renderForm(formArea, types, { title, saveLabel, instance }) {
   setReferencePlaceholders(formArea, types, typeSelect.value);
   typeSelect.addEventListener('change', () => {
     setReferencePlaceholders(formArea, types, typeSelect.value);
+    updateCGUnit(formArea, types, typeSelect.value);
+    updateWeightUnit(formArea, types, typeSelect.value);
   });
 }
 
@@ -362,14 +368,44 @@ function setReferencePlaceholders(formArea, types, typeId) {
   const refEW = type.limits?.referenceEmptyWeight || type.limits?.emptyWeight;
   if (refEW && ewInput) {
     ewInput.placeholder = `${refEW.value} (POH)`;
-    if (ewUnit && !ewInput.value) ewUnit.value = refEW.unit;
   }
 
   const refCG = type.limits?.referenceEmptyCG || type.weightBalance?.emptyCG;
   if (refCG && cgInput) {
     const val = refCG.value ?? refCG.arm;
     cgInput.placeholder = `${val} (POH)`;
-    if (cgUnit && !cgInput.value) cgUnit.value = refCG.unit;
+  }
+}
+
+/**
+ * Update the CG unit label when the type selection changes.
+ */
+function updateCGUnit(formArea, types, typeId) {
+  const type = types.find((t) => t.typeId === typeId);
+  if (!type) return;
+
+  const cgUnitLabel = formArea.querySelector('#fleet-cg-unit-label');
+  const cgUnitInput = formArea.querySelector('#fleet-cg-unit');
+  const typeCGUnit = type.weightBalance?.cgUnit || 'in';
+  const typeCGLabel = typeCGUnit === '%' ? '% MAC' : typeCGUnit;
+
+  if (cgUnitLabel) cgUnitLabel.textContent = typeCGLabel;
+  if (cgUnitInput) cgUnitInput.value = typeCGUnit === '%' ? 'percent_mac' : typeCGUnit;
+}
+
+/**
+ * Update the weight unit dropdown default when the type selection changes.
+ */
+function updateWeightUnit(formArea, types, typeId) {
+  const type = types.find((t) => t.typeId === typeId);
+  if (!type) return;
+
+  const ewUnit = formArea.querySelector('#fleet-ew-unit');
+  const ewInput = formArea.querySelector('#fleet-ew');
+  const typeWeightUnit = type.weightBalance?.weightUnit || 'kg';
+
+  if (ewUnit && !ewInput?.value) {
+    ewUnit.value = typeWeightUnit;
   }
 }
 
