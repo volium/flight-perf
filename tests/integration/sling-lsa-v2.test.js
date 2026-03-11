@@ -3,7 +3,6 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { validateTypeProfile } from '@/data/profile-validator.js';
 import { mergeProfile } from '@/data/profile-merger.js';
-import { migrateV1toV2, isV1Profile, isV2Profile } from '@/data/profile-migrator.js';
 import { calculateClimb } from '@/calc/climb.js';
 import { calculateTakeoff } from '@/calc/takeoff.js';
 import { calculateCruise } from '@/calc/cruise.js';
@@ -21,8 +20,7 @@ describe('Sling LSA v2 type profile', () => {
   const v2Profile = loadJSON(resolve(profilesDir, 'types/sling-lsa.json'));
 
   it('is detected as v2 format', () => {
-    expect(isV2Profile(v2Profile)).toBe(true);
-    expect(isV1Profile(v2Profile)).toBe(false);
+    expect(v2Profile.schemaVersion).toBe('2.0');
   });
 
   it('passes v2 validation with no errors', () => {
@@ -53,29 +51,6 @@ describe('Sling LSA v2 type profile', () => {
 
   it('has no tailNumber (moved to instance)', () => {
     expect(v2Profile.aircraft.tailNumber).toBeUndefined();
-  });
-});
-
-// ─── v1 bundled profile migration ───────────────────────────────────────────
-
-describe('Sling LSA v1 → v2 migration', () => {
-  const v1Profile = loadJSON(resolve(profilesDir, 'sling-lsa.json'));
-
-  it('v1 profile is detected as v1', () => {
-    expect(isV1Profile(v1Profile)).toBe(true);
-  });
-
-  it('migrated type passes v2 validation', () => {
-    const { type } = migrateV1toV2(v1Profile, { source: 'bundled' });
-    const result = validateTypeProfile(type);
-    expect(result.errors).toEqual([]);
-    expect(result.valid).toBe(true);
-  });
-
-  it('migrated instance has correct registration', () => {
-    const { instance } = migrateV1toV2(v1Profile);
-    expect(instance.registration).toBe('N246LT');
-    expect(instance.typeId).toBe('sling-lsa');
   });
 });
 

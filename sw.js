@@ -36,11 +36,9 @@ const APP_SHELL = [
   './js/data/profile-loader.js',
   './js/data/profile-validator.js',
   './js/data/profile-merger.js',
-  './js/data/profile-migrator.js',
   './js/data/db.js',
   './js/data/storage.js',
   './js/data/unit-preferences.js',
-  './profiles/sling-lsa.json',
   './profiles/types/sling-lsa.json',
 ];
 

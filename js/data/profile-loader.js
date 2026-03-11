@@ -8,7 +8,6 @@
 import { openDB, getType, getAllTypes, putType, getInstance, getAllInstances, putInstance } from './db.js';
 import { validateTypeProfile } from './profile-validator.js';
 import { mergeProfile } from './profile-merger.js';
-import { migrateV1toV2, isV1Profile } from './profile-migrator.js';
 import { storage } from './storage.js';
 
 /** Registry of bundled type profiles shipped with the app. */
@@ -118,13 +117,6 @@ export async function resolveActiveProfile() {
     storage.remove('activeAircraftId');
   }
 
-  // No active instance — check if we need to auto-migrate from v1
-  const oldProfileUrl = storage.get('profileUrl', null);
-  if (oldProfileUrl) {
-    const profile = await migrateFromV1Url(oldProfileUrl);
-    if (profile) return profile;
-  }
-
   // No aircraft configured — return null (fleet panel will prompt user)
   return null;
 }
@@ -167,47 +159,6 @@ export async function autoCreateDefaultInstance(typeId) {
   await putInstance(instance);
   storage.set('activeAircraftId', id);
   return instance;
-}
-
-// ─── v1 migration ───────────────────────────────────────────────────────────
-
-/**
- * Attempt to migrate a v1 profile from a URL.
- * Fetches the profile, migrates to v2, stores type + instance in IDB,
- * sets the instance as active, and removes the old profileUrl setting.
- *
- * @param {string} url
- * @returns {Promise<object|null>} Merged runtime profile, or null on failure
- */
-async function migrateFromV1Url(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-
-    const v1Profile = await response.json();
-    if (!isV1Profile(v1Profile)) return null;
-
-    const { type, instance } = migrateV1toV2(v1Profile, { source: 'bundled' });
-
-    // Store type if not already present (may have been seeded)
-    const existingType = await getType(type.typeId);
-    if (!existingType) {
-      await putType(type);
-    }
-
-    // Store instance and set active
-    if (instance) {
-      await putInstance(instance);
-      storage.set('activeAircraftId', instance.instanceId);
-      storage.remove('profileUrl');
-      return mergeProfile(existingType || type, instance);
-    }
-
-    return null;
-  } catch (err) {
-    console.warn('v1 migration failed:', err);
-    return null;
-  }
 }
 
 // ─── Legacy API (kept for backwards compatibility) ──────────────────────────
