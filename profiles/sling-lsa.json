@@ -112,8 +112,8 @@
         "name": "Normal Category",
         "color": "#22c55e",
         "points": [
-          { "weight": 384, "cg": 20.0 },
-          { "weight": 384, "cg": 33.0 },
+          { "weight": 350, "cg": 20.0 },
+          { "weight": 350, "cg": 33.0 },
           { "weight": 600, "cg": 33.0 },
           { "weight": 600, "cg": 20.0 }
         ]

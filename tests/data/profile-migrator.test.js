@@ -49,7 +49,7 @@ function v1SlingProfile() {
       envelopes: [{
         id: 'normal', name: 'Normal', color: '#22c55e',
         points: [
-          { weight: 384, cg: 20 }, { weight: 384, cg: 33 },
+          { weight: 350, cg: 20 }, { weight: 350, cg: 33 },
           { weight: 600, cg: 33 }, { weight: 600, cg: 20 },
         ],
       }],

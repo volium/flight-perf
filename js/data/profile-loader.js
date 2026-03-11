@@ -21,15 +21,13 @@ const BUNDLED_TYPE_URLS = [
 
 /**
  * Seed bundled type profiles into IndexedDB.
- * Idempotent — skips types that already exist in the store.
+ * Seeds new types and updates existing ones when the bundled version
+ * has a newer dataVersion than what's stored in IDB.
  * Called once on app startup.
  */
 export async function seedBundledTypes() {
   await openDB();
   for (const { typeId, url } of BUNDLED_TYPE_URLS) {
-    const existing = await getType(typeId);
-    if (existing) continue;
-
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -39,6 +37,12 @@ export async function seedBundledTypes() {
       const profile = await response.json();
       profile.typeId = profile.typeId || profile.aircraft?.id || typeId;
       profile.source = 'bundled';
+
+      const existing = await getType(typeId);
+      if (existing && existing.dataVersion >= (profile.dataVersion || 0)) {
+        continue; // already up to date
+      }
+
       await putType(profile);
     } catch (err) {
       console.warn(`Failed to seed bundled type ${typeId}:`, err);

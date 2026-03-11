@@ -2,6 +2,7 @@
   "schemaVersion": "2.0",
   "typeId": "cessna-172s",
   "source": "bundled",
+  "dataVersion": 1,
 
   "aircraft": {
     "id": "cessna-172s",
