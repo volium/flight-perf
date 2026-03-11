@@ -81,10 +81,16 @@ export async function refreshFleetSelector(selectorEl) {
   if (!selectorEl) selectorEl = document.getElementById('fleet-selector');
   if (!selectorEl) return;
 
-  const instances = await getAllInstances();
+  const allInstances = await getAllInstances();
   const types = await getAllTypes();
   const typeMap = Object.fromEntries(types.map((t) => [t.typeId, t]));
   const activeId = storage.get('activeAircraftId', null);
+
+  const instances = allInstances.sort((a, b) => {
+    if (a.instanceId === activeId) return -1;
+    if (b.instanceId === activeId) return 1;
+    return (a.registration || '').localeCompare(b.registration || '');
+  });
 
   selectorEl.innerHTML = '';
 
@@ -120,10 +126,16 @@ async function renderFleetList(panelEl) {
   const listEl = panelEl.querySelector('.fleet-list');
   if (!listEl) return;
 
-  const instances = await getAllInstances();
+  const allInstances = await getAllInstances();
   const types = await getAllTypes();
   const typeMap = Object.fromEntries(types.map((t) => [t.typeId, t]));
   const activeId = storage.get('activeAircraftId', null);
+
+  const instances = allInstances.sort((a, b) => {
+    if (a.instanceId === activeId) return -1;
+    if (b.instanceId === activeId) return 1;
+    return (a.registration || '').localeCompare(b.registration || '');
+  });
 
   listEl.innerHTML = '';
 
