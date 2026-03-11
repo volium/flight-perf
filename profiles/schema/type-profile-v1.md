@@ -260,7 +260,7 @@ V-speeds from the POH. All values use the `SpeedValue` pattern.
 | `vfe` | Maximum flap extended speed | UI display |
 | `vh` | Maximum level flight speed | Cruise climb factor calculation |
 | `vs` | Stall speed (clean configuration) | UI display |
-| `vglide` | Best glide speed | Future: emergency planning |
+| `vg` | Best glide speed | Future: emergency planning |
 | `vle` | Maximum landing gear extended speed | Retractable gear aircraft |
 
 Additional V-speeds can be added as needed. The validator accepts any key under `speeds` as long as it follows the `SpeedValue` pattern.

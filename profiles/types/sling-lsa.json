@@ -8,6 +8,7 @@
     "id": "sling-lsa",
     "name": "Sling LSA",
     "manufacturer": "Sling Aircraft",
+    "icaoType": "SLG2",
     "type": "single-engine-land",
     "category": "light-sport",
     "engine": "Rotax 912 iS",
@@ -53,7 +54,8 @@
     "vfe":  { "value": 85,  "unit": "kias", "description": "Maximum flap extended speed" },
     "vh":   { "value": 118, "unit": "kias", "description": "Maximum level flight speed" },
     "vs":   { "value": 45,  "unit": "kias", "description": "Stall speed (clean)" },
-    "vs0":  { "value": 40,  "unit": "kias", "description": "Stall speed (landing configuration)" }
+    "vs0":  { "value": 40,  "unit": "kias", "description": "Stall speed (landing configuration)" },
+    "vg": { "value": 72, "unit": "kias", "description": "Best glide speed" }
   },
 
   "weightBalance": {

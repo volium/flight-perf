@@ -73,7 +73,7 @@
                 { "config": "normal-flaps-full", "range": [60, 70] },
                 { "config": "short-field-flaps-full", "value": 61 }
               ]},
-    "vglide": { "value": 68, "unit": "kias", "description": "Best glide speed" }
+    "vg": { "value": 68, "unit": "kias", "description": "Best glide speed" }
   },
 
   "weightBalance": {
