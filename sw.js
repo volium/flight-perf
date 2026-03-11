@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'flightperf-v2';
+const CACHE_VERSION = 'flightperf-v3';
 
 const APP_SHELL = [
   './',
@@ -40,6 +40,7 @@ const APP_SHELL = [
   './js/data/storage.js',
   './js/data/unit-preferences.js',
   './profiles/types/sling-lsa.json',
+  './profiles/types/cessna-172s.json',
 ];
 
 self.addEventListener('install', (event) => {

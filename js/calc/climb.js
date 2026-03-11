@@ -1,12 +1,16 @@
-import { interpolateFromTable } from '../engine/interpolation.js';
+import { interpolateFromTable, interpolate2D } from '../engine/interpolation.js';
 import { pressureAltitude } from './density-altitude.js';
 
 /**
  * Perform climb performance calculation from profile data (single altitude).
  *
+ * Supports 1D (altitude only, e.g., Sling LSA) and 2D (altitude × temperature,
+ * e.g., Cessna 172S) interpolation based on the profile's variables array.
+ *
  * @param {object} profile – Full aircraft profile
  * @param {object} inputs
  * @param {number} inputs.pressureAltitude – Pressure altitude in feet
+ * @param {number} [inputs.temperature]   – OAT in °C (required for 2D profiles)
  * @returns {object} Calculation results
  */
 export function calculateClimb(profile, inputs) {
@@ -20,14 +24,28 @@ export function calculateClimb(profile, inputs) {
   }
 
   const { pressureAltitude } = inputs;
+  const variables = climb.variables || ['pressureAltitude'];
+  const hasTemp = variables.includes('temperature');
 
-  const roc = interpolateFromTable(
-    climb.data, 'pressureAltitude', 'rateOfClimb', pressureAltitude,
-  );
+  let roc, bcs;
 
-  const bcs = interpolateFromTable(
-    climb.data, 'pressureAltitude', 'bestClimbSpeed', pressureAltitude,
-  );
+  if (hasTemp && inputs.temperature != null) {
+    roc = interpolate2D(
+      climb.data, 'pressureAltitude', 'temperature', 'rateOfClimb',
+      pressureAltitude, inputs.temperature,
+    );
+    bcs = interpolate2D(
+      climb.data, 'pressureAltitude', 'temperature', 'bestClimbSpeed',
+      pressureAltitude, inputs.temperature,
+    );
+  } else {
+    roc = interpolateFromTable(
+      climb.data, 'pressureAltitude', 'rateOfClimb', pressureAltitude,
+    );
+    bcs = interpolateFromTable(
+      climb.data, 'pressureAltitude', 'bestClimbSpeed', pressureAltitude,
+    );
+  }
 
   return {
     rateOfClimb: Math.round(roc.value),
@@ -35,6 +53,7 @@ export function calculateClimb(profile, inputs) {
     clamped: roc.clamped,
     clampedTo: roc.clampedTo,
     pressureAltitude,
+    temperature: hasTemp ? inputs.temperature : null,
     referenceConditions: climb.referenceConditions,
     description: climb.description || '',
   };

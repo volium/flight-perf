@@ -13,7 +13,7 @@ import { storage } from './storage.js';
 /** Registry of bundled type profiles shipped with the app. */
 const BUNDLED_TYPE_URLS = [
   { typeId: 'sling-lsa', url: 'profiles/types/sling-lsa.json' },
-  // { typeId: 'cessna-172s', url: 'profiles/types/cessna-172s.json' },
+  { typeId: 'cessna-172s', url: 'profiles/types/cessna-172s.json' },
 ];
 
 // ─── Seeding ────────────────────────────────────────────────────────────────
