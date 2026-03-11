@@ -86,9 +86,7 @@ export function calculateCruise(profile, inputs) {
 
   // RPM range from data
   const rpmValues = [...new Set(cruise.data.map((d) => d.rpm))].sort((a, b) => a - b);
-  const altValues = [...new Set(cruise.data.map((d) =>
-    typeof d.pressureAltitude === 'object' ? d.pressureAltitude.value : d.pressureAltitude,
-  ))].sort((a, b) => a - b);
+  const altValues = [...new Set(cruise.data.map((d) => d.pressureAltitude))].sort((a, b) => a - b);
 
   return {
     pressureAltitude: pa,

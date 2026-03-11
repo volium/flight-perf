@@ -75,14 +75,14 @@ export function interpolate1D(xs, ys, x, opts = {}) {
  * @param {string} variableKey     – Key for the independent variable (e.g., "pressureAltitude")
  * @param {string} resultKey       – Key for the dependent variable (e.g., "rateOfClimb")
  * @param {number} variableValue   – Value to interpolate at
- * @param {function} [getVal]      – Optional accessor for nested values; defaults to (obj) => obj.value ?? obj
+ * @param {function} [getVal]      – Optional accessor; defaults to identity (plain number access)
  * @param {object}   [opts]        – Options passed through to interpolate1D
  * @param {boolean}  [opts.extrapolate=false] – Extrapolate beyond data range
  * @returns {{ value: number, clamped: boolean, clampedTo: string|null,
  *             extrapolated: boolean }}
  */
 export function interpolateFromTable(data, variableKey, resultKey, variableValue, getVal, opts) {
-  const accessor = getVal || ((obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj);
+  const accessor = getVal || ((obj) => obj);
 
   const sorted = [...data].sort((a, b) => accessor(a[variableKey]) - accessor(b[variableKey]));
 
@@ -107,12 +107,12 @@ export function interpolateFromTable(data, variableKey, resultKey, variableValue
  * @param {string} resultKey – Key for the dependent variable (e.g., "ktas")
  * @param {number} var1Value – Value for the first variable
  * @param {number} var2Value – Value for the second variable
- * @param {function} [getVal] – Optional accessor for nested values
+ * @param {function} [getVal] – Optional accessor; defaults to identity (plain number access)
  * @param {object}   [opts]   – Options passed through to interpolate1D
  * @returns {{ value: number, clamped: boolean, clampedTo: string|null, extrapolated: boolean }}
  */
 export function interpolate2D(data, var1Key, var2Key, resultKey, var1Value, var2Value, getVal, opts) {
-  const accessor = getVal || ((obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj);
+  const accessor = getVal || ((obj) => obj);
 
   // Get unique sorted values for var1
   const var1Set = [...new Set(data.map((d) => accessor(d[var1Key])))].sort((a, b) => a - b);
@@ -153,12 +153,12 @@ export function interpolate2D(data, var1Key, var2Key, resultKey, var1Value, var2
  * @param {number} var1Value – Value for the first variable
  * @param {number} var2Value – Value for the second variable
  * @param {number} var3Value – Value for the third variable
- * @param {function} [getVal] – Optional accessor for nested values
+ * @param {function} [getVal] – Optional accessor; defaults to identity (plain number access)
  * @param {object}   [opts]   – Options passed through to interpolate1D
  * @returns {{ value: number, clamped: boolean, clampedTo: string|null, extrapolated: boolean }}
  */
 export function interpolate3D(data, var1Key, var2Key, var3Key, resultKey, var1Value, var2Value, var3Value, getVal, opts) {
-  const accessor = getVal || ((obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj);
+  const accessor = getVal || ((obj) => obj);
 
   // Get unique sorted values for var1 (outermost variable)
   const var1Set = [...new Set(data.map((d) => accessor(d[var1Key])))].sort((a, b) => a - b);

@@ -183,32 +183,21 @@
       "description": "Rate of climb at max continuous power (5500 RPM), MTOW, ISA conditions",
       "variables": ["pressureAltitude"],
       "results": ["bestClimbSpeed", "rateOfClimb"],
+      "units": {
+        "pressureAltitude": "ft",
+        "bestClimbSpeed": "kias",
+        "rateOfClimb": "fpm"
+      },
       "referenceConditions": {
         "weight": { "value": 600, "unit": "kg" },
         "power": "max continuous (5500 RPM)",
         "atmosphere": "ISA"
       },
       "data": [
-        {
-          "pressureAltitude": { "value": 0, "unit": "ft" },
-          "bestClimbSpeed": { "value": 72, "unit": "kias" },
-          "rateOfClimb": { "value": 800, "unit": "fpm" }
-        },
-        {
-          "pressureAltitude": { "value": 3000, "unit": "ft" },
-          "bestClimbSpeed": { "value": 72, "unit": "kias" },
-          "rateOfClimb": { "value": 600, "unit": "fpm" }
-        },
-        {
-          "pressureAltitude": { "value": 6000, "unit": "ft" },
-          "bestClimbSpeed": { "value": 72, "unit": "kias" },
-          "rateOfClimb": { "value": 500, "unit": "fpm" }
-        },
-        {
-          "pressureAltitude": { "value": 9000, "unit": "ft" },
-          "bestClimbSpeed": { "value": 72, "unit": "kias" },
-          "rateOfClimb": { "value": 400, "unit": "fpm" }
-        }
+        { "pressureAltitude": 0,    "bestClimbSpeed": 72, "rateOfClimb": 800 },
+        { "pressureAltitude": 3000, "bestClimbSpeed": 72, "rateOfClimb": 600 },
+        { "pressureAltitude": 6000, "bestClimbSpeed": 72, "rateOfClimb": 500 },
+        { "pressureAltitude": 9000, "bestClimbSpeed": 72, "rateOfClimb": 400 }
       ]
     },
 
@@ -217,30 +206,36 @@
       "description": "Cruise speeds at various altitudes and RPM settings (fixed pitch propeller)",
       "variables": ["pressureAltitude", "rpm"],
       "results": ["kias", "ktas"],
+      "units": {
+        "pressureAltitude": "ft",
+        "rpm": "rpm",
+        "kias": "kias",
+        "ktas": "ktas"
+      },
       "data": [
-        { "pressureAltitude": { "value": 100, "unit": "ft" }, "rpm": 4500, "kias": 81, "ktas": 82 },
-        { "pressureAltitude": { "value": 100, "unit": "ft" }, "rpm": 4800, "kias": 95, "ktas": 96 },
-        { "pressureAltitude": { "value": 100, "unit": "ft" }, "rpm": 5000, "kias": 101, "ktas": 102 },
-        { "pressureAltitude": { "value": 100, "unit": "ft" }, "rpm": 5300, "kias": 106, "ktas": 108 },
-        { "pressureAltitude": { "value": 100, "unit": "ft" }, "rpm": 5500, "kias": 112, "ktas": 114 },
+        { "pressureAltitude": 100,  "rpm": 4500, "kias": 81,  "ktas": 82 },
+        { "pressureAltitude": 100,  "rpm": 4800, "kias": 95,  "ktas": 96 },
+        { "pressureAltitude": 100,  "rpm": 5000, "kias": 101, "ktas": 102 },
+        { "pressureAltitude": 100,  "rpm": 5300, "kias": 106, "ktas": 108 },
+        { "pressureAltitude": 100,  "rpm": 5500, "kias": 112, "ktas": 114 },
 
-        { "pressureAltitude": { "value": 3000, "unit": "ft" }, "rpm": 4500, "kias": 72, "ktas": 76 },
-        { "pressureAltitude": { "value": 3000, "unit": "ft" }, "rpm": 4800, "kias": 87, "ktas": 91 },
-        { "pressureAltitude": { "value": 3000, "unit": "ft" }, "rpm": 5000, "kias": 98, "ktas": 104 },
-        { "pressureAltitude": { "value": 3000, "unit": "ft" }, "rpm": 5300, "kias": 104, "ktas": 109 },
-        { "pressureAltitude": { "value": 3000, "unit": "ft" }, "rpm": 5500, "kias": 108, "ktas": 114 },
+        { "pressureAltitude": 3000, "rpm": 4500, "kias": 72,  "ktas": 76 },
+        { "pressureAltitude": 3000, "rpm": 4800, "kias": 87,  "ktas": 91 },
+        { "pressureAltitude": 3000, "rpm": 5000, "kias": 98,  "ktas": 104 },
+        { "pressureAltitude": 3000, "rpm": 5300, "kias": 104, "ktas": 109 },
+        { "pressureAltitude": 3000, "rpm": 5500, "kias": 108, "ktas": 114 },
 
-        { "pressureAltitude": { "value": 6000, "unit": "ft" }, "rpm": 4500, "kias": 65, "ktas": 73 },
-        { "pressureAltitude": { "value": 6000, "unit": "ft" }, "rpm": 4800, "kias": 80, "ktas": 89 },
-        { "pressureAltitude": { "value": 6000, "unit": "ft" }, "rpm": 5000, "kias": 90, "ktas": 100 },
-        { "pressureAltitude": { "value": 6000, "unit": "ft" }, "rpm": 5300, "kias": 98, "ktas": 108 },
-        { "pressureAltitude": { "value": 6000, "unit": "ft" }, "rpm": 5500, "kias": 101, "ktas": 115 },
+        { "pressureAltitude": 6000, "rpm": 4500, "kias": 65,  "ktas": 73 },
+        { "pressureAltitude": 6000, "rpm": 4800, "kias": 80,  "ktas": 89 },
+        { "pressureAltitude": 6000, "rpm": 5000, "kias": 90,  "ktas": 100 },
+        { "pressureAltitude": 6000, "rpm": 5300, "kias": 98,  "ktas": 108 },
+        { "pressureAltitude": 6000, "rpm": 5500, "kias": 101, "ktas": 115 },
 
-        { "pressureAltitude": { "value": 9000, "unit": "ft" }, "rpm": 4500, "kias": 63, "ktas": 73 },
-        { "pressureAltitude": { "value": 9000, "unit": "ft" }, "rpm": 4800, "kias": 74, "ktas": 88 },
-        { "pressureAltitude": { "value": 9000, "unit": "ft" }, "rpm": 5000, "kias": 87, "ktas": 99 },
-        { "pressureAltitude": { "value": 9000, "unit": "ft" }, "rpm": 5300, "kias": 91, "ktas": 105 },
-        { "pressureAltitude": { "value": 9000, "unit": "ft" }, "rpm": 5500, "kias": 94, "ktas": 108 }
+        { "pressureAltitude": 9000, "rpm": 4500, "kias": 63,  "ktas": 73 },
+        { "pressureAltitude": 9000, "rpm": 4800, "kias": 74,  "ktas": 88 },
+        { "pressureAltitude": 9000, "rpm": 5000, "kias": 87,  "ktas": 99 },
+        { "pressureAltitude": 9000, "rpm": 5300, "kias": 91,  "ktas": 105 },
+        { "pressureAltitude": 9000, "rpm": 5500, "kias": 94,  "ktas": 108 }
       ]
     },
 
@@ -248,53 +243,25 @@
       "method": "table_interpolation",
       "description": "Fuel consumption at various RPM settings",
       "variables": ["rpm"],
-      "results": ["fuelFlowLph", "fuelFlowGph", "airspeed", "endurance", "range"],
+      "results": ["fuelFlowLph", "fuelFlowGph"],
+      "units": {
+        "rpm": "rpm",
+        "fuelFlowLph": "L/hr",
+        "fuelFlowGph": "gal/hr",
+        "airspeed": "kias",
+        "range": "nm"
+      },
       "referenceConditions": {
         "altitude": { "value": 3000, "unit": "ft" },
         "atmosphere": "ISA",
         "fuelQuantity": { "value": 150, "unit": "L", "valueUSGal": 39.6 }
       },
       "data": [
-        {
-          "rpm": 4500,
-          "fuelFlowLph": 14,
-          "fuelFlowGph": 3.7,
-          "airspeed": { "value": 73, "unit": "kias" },
-          "endurance": { "hours": 10, "minutes": 40 },
-          "range": { "value": 781, "unit": "nm" }
-        },
-        {
-          "rpm": 4800,
-          "fuelFlowLph": 16,
-          "fuelFlowGph": 4.2,
-          "airspeed": { "value": 91, "unit": "kias" },
-          "endurance": { "hours": 9, "minutes": 20 },
-          "range": { "value": 853, "unit": "nm" }
-        },
-        {
-          "rpm": 5000,
-          "fuelFlowLph": 18,
-          "fuelFlowGph": 4.8,
-          "airspeed": { "value": 104, "unit": "kias" },
-          "endurance": { "hours": 8, "minutes": 20 },
-          "range": { "value": 866, "unit": "nm" }
-        },
-        {
-          "rpm": 5300,
-          "fuelFlowLph": 20,
-          "fuelFlowGph": 5.3,
-          "airspeed": { "value": 109, "unit": "kias" },
-          "endurance": { "hours": 7, "minutes": 30 },
-          "range": { "value": 817, "unit": "nm" }
-        },
-        {
-          "rpm": 5500,
-          "fuelFlowLph": 21,
-          "fuelFlowGph": 5.6,
-          "airspeed": { "value": 114, "unit": "kias" },
-          "endurance": { "hours": 7, "minutes": 10 },
-          "range": { "value": 815, "unit": "nm" }
-        }
+        { "rpm": 4500, "fuelFlowLph": 14, "fuelFlowGph": 3.7, "airspeed": 73, "enduranceHours": 10, "enduranceMinutes": 40, "range": 781 },
+        { "rpm": 4800, "fuelFlowLph": 16, "fuelFlowGph": 4.2, "airspeed": 91, "enduranceHours": 9,  "enduranceMinutes": 20, "range": 853 },
+        { "rpm": 5000, "fuelFlowLph": 18, "fuelFlowGph": 4.8, "airspeed": 104, "enduranceHours": 8, "enduranceMinutes": 20, "range": 866 },
+        { "rpm": 5300, "fuelFlowLph": 20, "fuelFlowGph": 5.3, "airspeed": 109, "enduranceHours": 7, "enduranceMinutes": 30, "range": 817 },
+        { "rpm": 5500, "fuelFlowLph": 21, "fuelFlowGph": 5.6, "airspeed": 114, "enduranceHours": 7, "enduranceMinutes": 10, "range": 815 }
       ]
     }
   }

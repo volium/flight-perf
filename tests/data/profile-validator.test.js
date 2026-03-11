@@ -76,9 +76,10 @@ describe('validateTypeProfile — valid profiles', () => {
     p.performance = {
       climb: {
         method: 'table_interpolation',
+        units: { pressureAltitude: 'ft', rateOfClimb: 'fpm' },
         data: [
-          { pressureAltitude: { value: 0, unit: 'ft' }, rateOfClimb: { value: 730, unit: 'fpm' } },
-          { pressureAltitude: { value: 4000, unit: 'ft' }, rateOfClimb: { value: 500, unit: 'fpm' } },
+          { pressureAltitude: 0, rateOfClimb: 730 },
+          { pressureAltitude: 4000, rateOfClimb: 500 },
         ],
       },
     };
@@ -514,12 +515,13 @@ describe('validateTypeProfile — performance', () => {
     p.performance = {
       climb: {
         method: 'table_interpolation',
+        units: { pressureAltitude: 'ft', rateOfClimb: 'fpm' },
         data: [
-          { pressureAltitude: { value: 0, unit: 'ft' }, rateOfClimb: { value: 800, unit: 'fpm' } },
-          { pressureAltitude: { value: 4000, unit: 'ft' }, rateOfClimb: { value: 500, unit: 'fpm' } },
+          { pressureAltitude: 0, rateOfClimb: 800 },
+          { pressureAltitude: 4000, rateOfClimb: 500 },
         ],
       },
-      cruise: { method: 'table_interpolation', data: [] }, // invalid
+      cruise: { method: 'table_interpolation', data: [] }, // invalid — missing units and data
     };
     const r = validateTypeProfile(p);
     expect(hasError(r, 'performance.cruise')).toBe(true);

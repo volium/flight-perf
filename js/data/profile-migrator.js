@@ -58,7 +58,16 @@ export function migrateV1toV2(v1Profile, options = {}) {
     delete type.weightBalance.emptyCG;
   }
 
-  // 8. Build instance (if tailNumber was present)
+  // 8. Convert performance data from ValueWithUnit to plain numbers + units
+  if (type.performance) {
+    for (const section of ['takeoff', 'landing', 'climb', 'cruise', 'fuelConsumption']) {
+      if (type.performance[section]?.method === 'table_interpolation' && Array.isArray(type.performance[section].data)) {
+        convertPerfDataToPlainNumbers(type.performance[section]);
+      }
+    }
+  }
+
+  // 9. Build instance (if tailNumber was present)
   let instance = null;
   if (tailNumber) {
     instance = {
@@ -105,12 +114,65 @@ export function isV2Profile(profile) {
 
 /**
  * Generate a simple unique ID.
- * Uses crypto.randomUUID() when available, otherwise falls back to a
- * timestamp-based ID.
  */
 function generateId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/**
+ * Convert a v1 table_interpolation data section from ValueWithUnit objects
+ * to plain numbers, and add a `units` declaration.
+ *
+ * Scans the first data point to detect ValueWithUnit fields ({ value, unit }),
+ * extracts units, then converts all data points to plain numbers.
+ * Also flattens endurance objects ({ hours, minutes }) to enduranceHours/enduranceMinutes.
+ */
+function convertPerfDataToPlainNumbers(section) {
+  const data = section.data;
+  if (!data || data.length === 0) return;
+
+  const units = {};
+  const firstRow = data[0];
+
+  // Detect ValueWithUnit fields and special objects from first row
+  for (const [key, val] of Object.entries(firstRow)) {
+    if (val != null && typeof val === 'object' && 'value' in val && 'unit' in val) {
+      units[key] = val.unit;
+    }
+  }
+
+  // Check for endurance { hours, minutes } pattern
+  const hasEndurance = firstRow.endurance && typeof firstRow.endurance === 'object' && 'hours' in firstRow.endurance;
+
+  // Convert all data points
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const converted = {};
+
+    for (const [key, val] of Object.entries(row)) {
+      if (key === 'endurance' && hasEndurance) {
+        converted.enduranceHours = val?.hours ?? 0;
+        converted.enduranceMinutes = val?.minutes ?? 0;
+      } else if (val != null && typeof val === 'object' && 'value' in val) {
+        converted[key] = val.value;
+      } else {
+        converted[key] = val;
+      }
+    }
+
+    data[i] = converted;
+  }
+
+  // Add units declaration
+  if (hasEndurance) {
+    units.enduranceHours = 'hr';
+    units.enduranceMinutes = 'min';
+  }
+
+  if (Object.keys(units).length > 0) {
+    section.units = units;
+  }
 }

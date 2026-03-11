@@ -43,9 +43,10 @@ function slingV2Type() {
     performance: {
       climb: {
         method: 'table_interpolation',
+        units: { pressureAltitude: 'ft', rateOfClimb: 'fpm' },
         data: [
-          { pressureAltitude: { value: 0, unit: 'ft' }, rateOfClimb: { value: 800, unit: 'fpm' } },
-          { pressureAltitude: { value: 9000, unit: 'ft' }, rateOfClimb: { value: 400, unit: 'fpm' } },
+          { pressureAltitude: 0, rateOfClimb: 800 },
+          { pressureAltitude: 9000, rateOfClimb: 400 },
         ],
       },
     },

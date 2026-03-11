@@ -109,10 +109,10 @@ describe('interpolate1D', () => {
 
 describe('interpolateFromTable', () => {
   const climbData = [
-    { pressureAltitude: { value: 0, unit: 'ft' }, rateOfClimb: { value: 800, unit: 'fpm' }, bestClimbSpeed: { value: 72, unit: 'kias' } },
-    { pressureAltitude: { value: 3000, unit: 'ft' }, rateOfClimb: { value: 600, unit: 'fpm' }, bestClimbSpeed: { value: 72, unit: 'kias' } },
-    { pressureAltitude: { value: 6000, unit: 'ft' }, rateOfClimb: { value: 500, unit: 'fpm' }, bestClimbSpeed: { value: 72, unit: 'kias' } },
-    { pressureAltitude: { value: 9000, unit: 'ft' }, rateOfClimb: { value: 400, unit: 'fpm' }, bestClimbSpeed: { value: 72, unit: 'kias' } },
+    { pressureAltitude: 0,    rateOfClimb: 800, bestClimbSpeed: 72 },
+    { pressureAltitude: 3000, rateOfClimb: 600, bestClimbSpeed: 72 },
+    { pressureAltitude: 6000, rateOfClimb: 500, bestClimbSpeed: 72 },
+    { pressureAltitude: 9000, rateOfClimb: 400, bestClimbSpeed: 72 },
   ];
 
   it('returns exact value at a data point (Sling ROC at sea level = 800 fpm)', () => {
@@ -169,15 +169,15 @@ describe('interpolateFromTable', () => {
 describe('interpolate2D', () => {
   // Sling LSA cruise table subset
   const cruiseData = [
-    { pressureAltitude: { value: 100, unit: 'ft' }, rpm: 4500, ktas: 82 },
-    { pressureAltitude: { value: 100, unit: 'ft' }, rpm: 5000, ktas: 102 },
-    { pressureAltitude: { value: 100, unit: 'ft' }, rpm: 5500, ktas: 114 },
-    { pressureAltitude: { value: 3000, unit: 'ft' }, rpm: 4500, ktas: 76 },
-    { pressureAltitude: { value: 3000, unit: 'ft' }, rpm: 5000, ktas: 104 },
-    { pressureAltitude: { value: 3000, unit: 'ft' }, rpm: 5500, ktas: 114 },
-    { pressureAltitude: { value: 6000, unit: 'ft' }, rpm: 4500, ktas: 73 },
-    { pressureAltitude: { value: 6000, unit: 'ft' }, rpm: 5000, ktas: 100 },
-    { pressureAltitude: { value: 6000, unit: 'ft' }, rpm: 5500, ktas: 115 },
+    { pressureAltitude: 100,  rpm: 4500, ktas: 82 },
+    { pressureAltitude: 100,  rpm: 5000, ktas: 102 },
+    { pressureAltitude: 100,  rpm: 5500, ktas: 114 },
+    { pressureAltitude: 3000, rpm: 4500, ktas: 76 },
+    { pressureAltitude: 3000, rpm: 5000, ktas: 104 },
+    { pressureAltitude: 3000, rpm: 5500, ktas: 114 },
+    { pressureAltitude: 6000, rpm: 4500, ktas: 73 },
+    { pressureAltitude: 6000, rpm: 5000, ktas: 100 },
+    { pressureAltitude: 6000, rpm: 5500, ktas: 115 },
   ];
 
   it('returns exact value at a grid point (3000 ft, 5000 RPM → 104 kt)', () => {
@@ -318,20 +318,5 @@ describe('interpolate3D', () => {
     // Clamps to min weight (2200), min alt (0), min temp (0) → 610
     expect(r.value).toBe(610);
     expect(r.clamped).toBe(true);
-  });
-
-  it('works with nested ValueWithUnit objects', () => {
-    const nestedData = [
-      { weight: { value: 2200 }, pressureAltitude: { value: 0 }, temperature: { value: 0 }, groundRoll: { value: 610 } },
-      { weight: { value: 2200 }, pressureAltitude: { value: 0 }, temperature: { value: 20 }, groundRoll: { value: 705 } },
-      { weight: { value: 2550 }, pressureAltitude: { value: 0 }, temperature: { value: 0 }, groundRoll: { value: 860 } },
-      { weight: { value: 2550 }, pressureAltitude: { value: 0 }, temperature: { value: 20 }, groundRoll: { value: 995 } },
-    ];
-    const r = interpolate3D(
-      nestedData, 'weight', 'pressureAltitude', 'temperature', 'groundRoll',
-      2375, 0, 10,
-    );
-    // mid-weight, mid-temp: ((610+705)/2 + (860+995)/2) / 2 = (657.5+927.5)/2 = 792.5
-    expect(r.value).toBeCloseTo(792.5, 1);
   });
 });

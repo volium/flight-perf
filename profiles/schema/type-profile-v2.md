@@ -53,28 +53,41 @@ When an optional section is absent, the corresponding calculator displays "No [X
 
 ## 2. Common Patterns
 
-### ValueWithUnit
+### Data Values in Performance Tables
 
-The fundamental data pattern for any physical quantity. Used throughout the schema.
+All values in `table_interpolation` data arrays are **plain numbers**. Units are declared once at the section level in a `units` object, not repeated per data point. This keeps data arrays compact and fast to parse.
+
+```jsonc
+{
+  "method": "table_interpolation",
+  "units": {
+    "pressureAltitude": "ft",
+    "temperature": "C",
+    "groundRoll": "ft",
+    "totalOver50ft": "ft"
+  },
+  "data": [
+    { "pressureAltitude": 0, "temperature": 20, "groundRoll": 995, "totalOver50ft": 1690 }
+  ]
+}
+```
+
+> **Note:** The `units` object is descriptive metadata — it documents what unit each field uses
+> but is not consumed by the interpolation engine. The engine operates on raw numbers.
+> Unit conversion for display is handled by the UI layer.
+
+### ValueWithUnit (for non-interpolation fields only)
+
+The `{ value, unit }` pattern is used for **metadata and limit fields** (not data arrays):
 
 ```jsonc
 {
   "value": 600,          // number — the numeric value
-  "unit": "kg"           // string — the unit (see Valid Enums for allowed values)
+  "unit": "kg"           // string — the unit
 }
 ```
 
-Some fields include **pre-computed alternate unit values** for convenience (avoids floating-point conversion artifacts):
-
-```jsonc
-{
-  "value": 600,
-  "unit": "kg",
-  "valueLbs": 1320       // optional pre-computed conversion
-}
-```
-
-These alternate values (e.g., `valueLbs`, `valueFt`, `valueUSGal`) are optional hints. If absent, the app computes conversions at runtime.
+Used in: `limits.*`, `fuel.capacity`, `referenceConditions.*`, `obstacleHeight`, station `arm` and `maxWeight` fields.
 
 ### SpeedValue
 
@@ -378,10 +391,10 @@ Used when the POH provides a multi-dimensional table (e.g., altitude × temperat
 **Data point example (takeoff, altitude × temperature):**
 ```jsonc
 {
-  "pressureAltitude": { "value": 0, "unit": "ft" },
-  "temperature": { "value": 15, "unit": "C" },
-  "groundRoll": { "value": 960, "unit": "ft" },
-  "totalOver50ft": { "value": 1685, "unit": "ft" }
+  "pressureAltitude": 0,
+  "temperature": 15,
+  "groundRoll": 960,
+  "totalOver50ft": 1685
 }
 ```
 
@@ -413,9 +426,9 @@ Correction types: `"headwind"`, `"tailwind"`, `"grass_runway"`, `"slope_uphill"`
 **Data point:**
 ```jsonc
 {
-  "pressureAltitude": { "value": 0, "unit": "ft" },
-  "rateOfClimb": { "value": 800, "unit": "fpm" },
-  "bestClimbSpeed": { "value": 72, "unit": "kias" }
+  "pressureAltitude": 0,
+  "rateOfClimb": 800,
+  "bestClimbSpeed": 72
 }
 ```
 
@@ -432,14 +445,14 @@ Correction types: `"headwind"`, `"tailwind"`, `"grass_runway"`, `"slope_uphill"`
 **Data point:**
 ```jsonc
 {
-  "pressureAltitude": { "value": 3000, "unit": "ft" },
+  "pressureAltitude": 3000,
   "rpm": 5000,
   "kias": 98,
   "ktas": 104
 }
 ```
 
-Note: `pressureAltitude` uses `ValueWithUnit`; `rpm`, `kias`, `ktas` are plain numbers.
+Note: `pressureAltitude` and `rpm` are plain numbers; units declared at section level.
 
 ### 9.5 performance.fuelConsumption — Optional
 
@@ -458,13 +471,14 @@ Note: `pressureAltitude` uses `ValueWithUnit`; `rpm`, `kias`, `ktas` are plain n
   "rpm": 5000,
   "fuelFlowLph": 18,
   "fuelFlowGph": 4.8,
-  "airspeed": { "value": 104, "unit": "kias" },   // optional
-  "endurance": { "hours": 8, "minutes": 20 },      // optional — pre-computed reference
-  "range": { "value": 866, "unit": "nm" }           // optional — pre-computed reference
+  "airspeed": 104,
+  "enduranceHours": 8,
+  "enduranceMinutes": 20,
+  "range": 866
 }
 ```
 
-The `airspeed`, `endurance`, and `range` fields are optional reference values from the POH. The app recomputes endurance and range from actual fuel on board.
+The `airspeed`, `enduranceHours`, `enduranceMinutes`, and `range` fields are optional reference values from the POH. The app recomputes endurance and range from actual fuel on board.
 
 ---
 
@@ -564,6 +578,7 @@ Fuel flow fields use fixed naming (`fuelFlowLph`, `fuelFlowGph`) rather than a u
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-03-10 | 2.0 | Initial v2 schema. Type/instance split. `referenceEmptyWeight`, `referenceEmptyCG` added. `tailNumber`, `usefulLoad` removed from type. `source` field added. |
+| 2026-03-11 | 2.0.1 | Standardized `table_interpolation` data format: plain numbers in data arrays, units declared at section level via `units` object. Removed ValueWithUnit pattern from data arrays. Added `units` field to performance sections. Flattened fuel consumption `endurance` from `{hours, minutes}` to `enduranceHours`/`enduranceMinutes` plain fields. |
 
 > **Future additions anticipated:** When adding the Cessna 172S profile, we expect to add or refine:
 > - `table_interpolation` data patterns for takeoff/landing (altitude × temperature grids)

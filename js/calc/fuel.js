@@ -52,8 +52,7 @@ export function calculateFuelPlan(profile, inputs) {
 
   // Fallback: use airspeed from fuel table
   if (!tasKt || isNaN(tasKt)) {
-    const accessor = (obj) => (obj != null && typeof obj === 'object' && 'value' in obj) ? obj.value : obj;
-    const asResult = interpolateFromTable(fuel.data, 'rpm', 'airspeed', rpm, accessor);
+    const asResult = interpolateFromTable(fuel.data, 'rpm', 'airspeed', rpm);
     tasKt = asResult.value;
   }
 

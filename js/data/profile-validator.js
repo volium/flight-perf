@@ -316,6 +316,10 @@ function validatePerfSection(section, path, errors, warnings) {
     errors.push(issue(`${path}.method`, `Unknown method: "${section.method}". Valid: ${VALID_PERF_METHODS.join(', ')}`, 'enum'));
   }
 
+  if (section.method === 'table_interpolation' && (!section.units || typeof section.units !== 'object')) {
+    errors.push(issue(`${path}.units`, 'Missing required units declaration for table_interpolation section', 'structure'));
+  }
+
   if (!Array.isArray(section.data) || section.data.length === 0) {
     errors.push(issue(`${path}.data`, 'Missing or empty data array', 'structure'));
     return;
