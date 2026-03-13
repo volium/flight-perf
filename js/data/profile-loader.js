@@ -10,6 +10,9 @@ import { validateTypeProfile } from './profile-validator.js';
 import { mergeProfile } from './profile-merger.js';
 import { storage } from './storage.js';
 
+/** Version stamp for bundled profiles — bump when any bundled profile changes. */
+const BUNDLED_DATA_VERSION = 1;
+
 /** Registry of bundled type profiles shipped with the app. */
 const BUNDLED_TYPE_URLS = [
   { typeId: 'sling-lsa', url: 'profiles/types/sling-lsa.json' },
@@ -28,7 +31,7 @@ export async function seedBundledTypes() {
   await openDB();
   for (const { typeId, url } of BUNDLED_TYPE_URLS) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(`${url}?v=${BUNDLED_DATA_VERSION}`);
       if (!response.ok) {
         console.warn(`Failed to fetch bundled profile ${url}: ${response.status}`);
         continue;

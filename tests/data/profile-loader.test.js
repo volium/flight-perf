@@ -29,6 +29,7 @@ function slingV2Type() {
       cgReference: 'percent_mac',
       cgUnit: '%',
       weightUnit: 'kg',
+      armUnit: 'mm',
       macLeadingEdge: { value: 1366, unit: 'mm' },
       macLength: { value: 1339, unit: 'mm' },
       stations: [

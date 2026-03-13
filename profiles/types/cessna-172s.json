@@ -80,6 +80,7 @@
     "cgReference": "arm",
     "cgUnit": "in",
     "weightUnit": "lbs",
+    "armUnit": "in",
     "datum": "Lower portion of front face of firewall",
 
     "stations": [

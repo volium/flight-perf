@@ -208,6 +208,14 @@ function validateSpeeds(speeds, errors, warnings) {
 function validateWeightBalance(wb, limits, errors, warnings) {
   if (!wb) return; // optional section
 
+  if (!wb.cgUnit) {
+    errors.push(issue('weightBalance.cgUnit', 'Missing required field: cgUnit', 'structure'));
+  }
+
+  if (!wb.armUnit) {
+    errors.push(issue('weightBalance.armUnit', 'Missing required field: armUnit', 'structure'));
+  }
+
   if (!VALID_CG_REFERENCES.includes(wb.cgReference)) {
     errors.push(issue('weightBalance.cgReference', `Invalid cgReference: "${wb.cgReference}". Valid: ${VALID_CG_REFERENCES.join(', ')}`, 'enum'));
   }

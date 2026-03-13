@@ -61,6 +61,7 @@ describe('validateTypeProfile — valid profiles', () => {
       cgReference: 'arm',
       cgUnit: 'in',
       weightUnit: 'lbs',
+      armUnit: 'in',
       stations: [
         { id: 'pilot', name: 'Pilot', arm: { value: 37, unit: 'in' } },
         { id: 'fuel', name: 'Fuel', arm: { value: 48, unit: 'in' }, fuelStation: true },
@@ -340,6 +341,7 @@ describe('validateTypeProfile — weightBalance', () => {
       cgReference: 'arm',
       cgUnit: 'in',
       weightUnit: 'lbs',
+      armUnit: 'in',
       stations: [
         { id: 'pilot', name: 'Pilot', arm: { value: 37, unit: 'in' } },
         { id: 'fuel', name: 'Fuel', arm: { value: 48, unit: 'in' }, fuelStation: true },
