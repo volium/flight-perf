@@ -7,7 +7,7 @@
 | **Project** | flight-perf |
 | **Repository** | GitHub — hosted via GitHub Pages |
 | **Created** | 2026-03-07 |
-| **Status** | Phase 2 In Progress |
+| **Status** | Phase 3C Complete |
 
 ---
 
@@ -1243,13 +1243,14 @@ flight-perf/
 │   └── responsive.css          # Media queries for breakpoints
 │
 ├── js/
-│   ├── app.js                  # App initialization, profile loading, calculator wiring
+│   ├── app.js                  # App initialization, fleet wiring, calculator init
 │   ├── ui/
 │   │   ├── tabs.js             # Tab navigation with keyboard support
-│   │   ├── settings.js         # Settings panel (theme, profile selector)
+│   │   ├── settings.js         # Settings panel (theme, units, reset, fleet link)
+│   │   ├── fleet.js            # Fleet management panel (add/edit/remove aircraft)
 │   │   ├── perf-ui-common.js   # Shared UI: margin fieldset, distance results, ref notes
-│   │   ├── takeoff.js          # Takeoff calculator UI
-│   │   ├── landing.js          # Landing calculator UI
+│   │   ├── takeoff.js          # Takeoff calculator UI (reference_table + table_interpolation)
+│   │   ├── landing.js          # Landing calculator UI (reference_table + table_interpolation)
 │   │   ├── climb.js            # Climb planner UI
 │   │   ├── cruise.js           # Cruise performance UI
 │   │   ├── weight-balance.js   # Weight & Balance UI with SVG envelope chart
@@ -1259,29 +1260,32 @@ flight-perf/
 │   │
 │   ├── calc/
 │   │   ├── density-altitude.js # Pressure alt, density alt, ISA formulas
-│   │   ├── takeoff.js          # Takeoff distance (reference_table + interpolation)
-│   │   ├── landing.js          # Landing distance (reference_table + interpolation)
-│   │   ├── climb.js            # Climb rate interpolation + time-to-climb integration
+│   │   ├── takeoff.js          # Takeoff distance (reference_table + table_interpolation)
+│   │   ├── landing.js          # Landing distance (reference_table + table_interpolation)
+│   │   ├── climb.js            # Climb rate (1D or 2D interpolation) + time-to-climb
 │   │   ├── cruise.js           # Cruise speed (2D interpolation) + density-corrected fuel
-│   │   ├── weight-balance.js   # W&B: stations, CG, %MAC, envelope check (ray casting)
+│   │   ├── weight-balance.js   # W&B: stations, CG, %MAC or arm, envelope check
 │   │   ├── crosswind.js        # Wind component decomposition (trigonometric)
 │   │   └── fuel.js             # Fuel planning with density-corrected flow + usable fuel
 │   │
 │   ├── engine/
-│   │   ├── interpolation.js    # 1D linear + 2D bilinear interpolation with clamping
+│   │   ├── interpolation.js    # 1D linear, 2D bilinear, 3D trilinear interpolation
 │   │   ├── margins.js          # Safety margin application (percentage, fixed, roundUp)
 │   │   ├── perf-common.js      # Shared calc: reference table lookup, distance conversion
 │   │   └── units.js            # Unit conversions & number formatting
 │   │
 │   └── data/
-│       ├── profile-loader.js   # Fetch & validate aircraft profiles
+│       ├── db.js               # IndexedDB abstraction (types, fleet, syncMeta stores)
+│       ├── profile-loader.js   # Seed bundled types, resolve active profile from IDB
+│       ├── profile-merger.js   # mergeProfile(type, instance) → runtime profile
+│       ├── profile-validator.js # Comprehensive profile validation (errors + warnings)
 │       ├── fuel-types.js       # Built-in fuel type registry (100LL, MOGAS, Jet-A, etc.)
 │       ├── unit-preferences.js # Global unit preferences, conversion, smart rounding
 │       └── storage.js          # localStorage abstraction with prefix namespacing
 │
 ├── tests/
 │   ├── engine/
-│   │   ├── interpolation.test.js   # 1D, table, 2D interpolation tests
+│   │   ├── interpolation.test.js   # 1D, table, 2D, 3D interpolation tests
 │   │   ├── margins.test.js         # Safety margin tests
 │   │   ├── units.test.js           # Unit conversion round-trip & formatting tests
 │   │   └── perf-common.test.js     # Reference table, distance, obstacle label tests
@@ -1293,16 +1297,23 @@ flight-perf/
 │   │   ├── cruise.test.js          # 2D interpolation, fuel flow, endurance tests
 │   │   ├── weight-balance.test.js  # W&B, CG, %MAC, envelope, baggage tests
 │   │   └── fuel.test.js            # Fuel planning, density correction, reserve tests
-│   └── data/
-│       ├── fuel-types.test.js       # Fuel type registry tests
-│       └── unit-preferences.test.js # convertValue, smart rounding tests
+│   ├── data/
+│   │   ├── db.test.js               # IndexedDB CRUD for types, fleet, syncMeta
+│   │   ├── profile-validator.test.js # Type profile + instance validation
+│   │   ├── profile-merger.test.js   # Type+instance merge, fallback
+│   │   ├── profile-loader.test.js   # IDB resolution, seeding, auto-create
+│   │   ├── fuel-types.test.js       # Fuel type registry tests
+│   │   └── unit-preferences.test.js # convertValue, smart rounding tests
+│   └── integration/
+│       ├── sling-lsa.test.js        # Sling LSA profile validation + calc compat
+│       └── cessna-172s.test.js      # Cessna 172S profile validation + calc compat
 │
 ├── profiles/
 │   ├── schema/
-│   │   └── type-profile-v2.md     # v2 schema reference (living document)
-│   └── types/                     # Aircraft type profiles (v2 format)
-│       ├── sling-lsa.json         # N246LT Sling LSA type profile
-│       └── cessna-172s.json       # Cessna 172S Skyhawk SP type profile
+│   │   └── type-profile-v1.md     # Profile schema reference (living document)
+│   └── types/                     # Aircraft type profiles
+│       ├── sling-lsa.json         # Sling LSA type profile (370 kg, %MAC CG)
+│       └── cessna-172s.json       # Cessna 172S Skyhawk SP (2550 lbs, arm CG)
 │
 └── icons/
     ├── icon-192.png
@@ -1366,12 +1377,11 @@ flight-perf/
 
 | Task | Description | Depends On | Status |
 |------|-------------|------------|--------|
-| 3A.1 |
 | 3A.1 | **IndexedDB abstraction** (`js/data/db.js`) — Promise-based CRUD for `types`, `fleet`, `syncMeta` stores | — | ✅ |
-| 3A.2 | **Type profile schema v2** — define structure, document required vs optional sections (`profiles/schema/type-profile-v2.md`) | — | ✅ |
+| 3A.2 | **Type profile schema** — define structure, document required vs optional sections (`profiles/schema/type-profile-v1.md`) | — | ✅ |
 | 3A.3 | **Profile validator** (`js/data/profile-validator.js`) — comprehensive validation with errors + warnings | 3A.2 | ✅ |
 | 3A.4 | **Profile merger** (`js/data/profile-merger.js`) — `mergeProfile(type, instance)` producing runtime profile compatible with existing calc layer | 3A.2 | ✅ |
-| 3A.5 | **v1 → v2 migration** (`js/data/profile-migrator.js`) — convert existing v1 Sling LSA profile to v2 type + instance | 3A.2, 3A.3 | ✅ |
+| 3A.5 | **v1 → v2 migration** — migrator was built and later removed (no users with v1 data before release) | 3A.2, 3A.3 | ✅ (removed) |
 | 3A.6 | **Migrate bundled Sling LSA profile** to v2 format (`profiles/types/sling-lsa.json`) | 3A.5 | ✅ |
 | 3A.7 | **Update profile-loader.js** — support v2 types from IDB; first-run seeding of bundled types; deprecate URL-based loading | 3A.1, 3A.3 | ✅ |
 | 3A.8 | **Update app.js** — IndexedDB-based profile resolution (read active ID → load instance → load type → merge → set state) | 3A.1, 3A.4, 3A.7 | ✅ |
@@ -1388,12 +1398,12 @@ flight-perf/
 
 #### Phase 3C — New Profiles
 
-| Task | Description | Depends On |
-|------|-------------|------------|
-| 3C.1 | **Cessna 172S type profile** (`profiles/types/cessna-172s.json`) — full POH data with `table_interpolation` for takeoff/landing (altitude × temperature grids) | 3A.2 |
-| 3C.2 | **Extend takeoff/landing calcs** for `table_interpolation` method — multi-variable grids (Cessna uses altitude × temp, Sling uses reference tables) | 3C.1 |
-| 3C.3 | **Cessna 172S unit tests** — POH-derived test cases for all calculators with the new profile | 3C.2 |
-| 3C.4 | **Profile import/export** — file picker import (JSON) with v2 validation; export type profile and/or instance as JSON download | 3A.3, 3B.1 |
+| Task | Description | Depends On | Status |
+|------|-------------|------------|--------|
+| 3C.1 | **Cessna 172S type profile** (`profiles/types/cessna-172s.json`) — full POH data with `table_interpolation` for takeoff/landing (altitude × temperature grids) | 3A.2 | ✅ |
+| 3C.2 | **Extend takeoff/landing/climb calcs** for `table_interpolation` method — multi-variable grids, 3D interpolation, distance unit conversion, corrections | 3C.1 | ✅ |
+| 3C.3 | **Cessna 172S integration tests** — POH-derived test cases for takeoff, landing, climb, W&B | 3C.2 | ✅ |
+| 3C.4 | **Profile import/export** — file picker import (JSON) with validation; export type profile and/or instance as JSON download | 3A.3, 3B.1 | |
 
 #### Phase 3D — Profile Creation Wizard
 
@@ -1461,7 +1471,7 @@ flight-perf/
 
 ### Test Data Principles
 
-1. **POH-derived values** — All aviation test data uses actual Sling LSA POH figures. Tests serve as both correctness checks and documentation of expected behavior.
+1. **POH-derived values** — All aviation test data uses actual Sling LSA and Cessna 172S POH figures. Tests serve as both correctness checks and documentation of expected behavior.
 2. **Known-answer tests** — Where formulas have well-known results (e.g., ISA temperature at sea level = 15 °C, standard pressure = 29.92 inHg), use those exact values.
 3. **Round-trip accuracy** — Unit conversions are tested for round-trip fidelity within floating-point tolerance.
 4. **Edge cases** — Every module tests boundary conditions: empty inputs, clamped ranges, zero values, missing data.
@@ -1472,27 +1482,28 @@ flight-perf/
 ```
 tests/
 ├── engine/
-│   ├── interpolation.test.js   ─ 1D, table, 2D interpolation
+│   ├── interpolation.test.js   ─ 1D, table, 2D, 3D interpolation
 │   ├── margins.test.js         ─ Safety margin application
 │   ├── units.test.js           ─ All unit conversions & formatNumber
 │   └── perf-common.test.js     ─ Reference table calc, distance, obstacle label
 ├── calc/
 │   ├── density-altitude.test.js ─ PA, ISA temp, DA, density ratio, full calc
 │   ├── crosswind.test.js       ─ Wind components, full crosswind with gusts
-│   ├── takeoff-landing.test.js  ─ Takeoff & landing (shared reference_table logic)
+│   ├── takeoff-landing.test.js  ─ Takeoff & landing (reference_table method)
 │   ├── climb.test.js           ─ Single-altitude climb, full climb plan
 │   ├── cruise.test.js          ─ 2D cruise interpolation, fuel flow, endurance
 │   ├── weight-balance.test.js  ─ W&B, CG, %MAC, envelope check, baggage
 │   └── fuel.test.js            ─ Fuel planning, density correction, reserves
-└── data/
-    ├── db.test.js               ─ IndexedDB CRUD for types, fleet, syncMeta
-    ├── profile-validator.test.js ─ Type profile + instance validation
-    ├── profile-merger.test.js   ─ Type+instance merge, fallback, v1 compat
-    ├── profile-migrator.test.js ─ v1→v2 migration, field mapping, isolation
-    ├── profile-loader.test.js  ─ IDB resolution, seeding, auto-create, legacy compat
-    ├── fuel-types.test.js
-    ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
-    └── unit-preferences.test.js ─ convertValue, smart rounding
+├── data/
+│   ├── db.test.js               ─ IndexedDB CRUD for types, fleet, syncMeta
+│   ├── profile-validator.test.js ─ Type profile + instance validation
+│   ├── profile-merger.test.js   ─ Type+instance merge, fallback
+│   ├── profile-loader.test.js   ─ IDB resolution, seeding, auto-create
+│   ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
+│   └── unit-preferences.test.js ─ convertValue, smart rounding
+└── integration/
+    ├── sling-lsa.test.js        ─ Sling LSA profile validation + calc compat
+    └── cessna-172s.test.js      ─ Cessna 172S profile validation + calc compat
 ```
 
 ### Module Test Coverage
@@ -1501,7 +1512,7 @@ tests/
 
 | Module | Functions | Test Cases | Key Scenarios |
 |--------|-----------|------------|---------------|
-| `engine/interpolation.js` | `interpolate1D`, `interpolateFromTable`, `interpolate2D` | ~25 | Empty arrays, single point, exact match, midpoint, off-center, clamping (min/max), extrapolation, nested object accessor, unsorted data, 2D bilinear on Sling cruise grid |
+| `engine/interpolation.js` | `interpolate1D`, `interpolateFromTable`, `interpolate2D`, `interpolate3D` | ~36 | Empty arrays, single point, exact match, midpoint, off-center, clamping (min/max), extrapolation, unsorted data, 2D bilinear, 3D trilinear with Cessna takeoff data |
 | `engine/margins.js` | `applyMargin`, `emptyMargins` | ~10 | No margin, percentage only, fixed only, roundUp only, combined (pct+fixed+round), description string, zero raw value |
 | `engine/units.js` | 14 conversion functions + `formatNumber` | ~20 | Each conversion pair forward & reverse, round-trip accuracy (e.g., kg→lbs→kg), temperature (known: 0°C=32°F, 100°C=212°F), `formatNumber` with null/NaN/valid |
 | `engine/perf-common.js` | `calcReferenceTable`, `getDistanceValue`, `formatObstacleLabel` | ~12 | Valid surface lookup, unknown surface → error, distance in native/converted units, obstacle label formatting (metric with ft, imperial) |
@@ -1524,14 +1535,19 @@ tests/
 |--------|-----------|------------|---------------|
 | `data/db.js` | `openDB`, `closeDB`, `getType`, `getAllTypes`, `getTypesBySource`, `putType`, `deleteType`, `clearTypes`, `getInstance`, `getAllInstances`, `getInstancesByType`, `putInstance`, `deleteInstance`, `clearFleet`, `getSyncMeta`, `putSyncMeta`, `deleteSyncMeta` | ~27 | Database open/create, CRUD round-trips for all 3 stores, index queries (source, typeId), overwrite semantics, delete missing key (safe), clear store, cross-store isolation |
 | `data/profile-validator.js` | `validateTypeProfile`, `validateInstance` | ~60 | Valid minimal profile, null/invalid input, schemaVersion checks, all 4 required sections (aircraft, limits, fuel, speeds), optional W&B section (%MAC requirements, station validation, envelope polygon ≥3 points, baggage constraint refs), performance method/data checks, physics rules (MTOW>EW, Vs0<Vne, usable≤capacity), completeness warnings, instance validation |
-| `data/profile-merger.js` | `mergeProfile` | ~27 | Type+instance merge (tailNumber, emptyWeight, emptyCG, usefulLoad), fallback to type defaults, %MAC and arm CG formats, v1 backwards compat, deep clone isolation, instance metadata, edge cases (no W&B, no performance, no instance) |
-| `data/profile-migrator.js` | `migrateV1toV2`, `isV1Profile`, `isV2Profile` | ~37 | v1→v2 type conversion (schemaVersion, referenceEmptyWeight, referenceEmptyCG, remove usefulLoad), instance extraction (tailNumber→registration, emptyWeight, emptyCG), source tagging, no tailNumber→null instance, deep clone isolation, unique IDs, error handling |
+| `data/profile-merger.js` | `mergeProfile` | ~24 | Type+instance merge (tailNumber, emptyWeight, emptyCG, usefulLoad), fallback to type defaults, %MAC and arm CG formats, deep clone isolation, instance metadata, edge cases (no W&B, no performance, no instance) |
 | `data/profile-loader.js` | `resolveProfile`, `resolveDefaultProfile`, `seedTypesFromData`, `autoCreateDefaultInstance`, `validateProfile` | ~16 | IDB-based profile resolution (instance+type→merge), default profile fallback, type seeding from data, auto-create instance from type defaults, legacy validateProfile compat |
-| `data/fuel-types.js`
 | `data/fuel-types.js` | `getFuelType`, `getAllFuelTypes`, `fuelVolumeToWeight` | ~10 | Known types (100LL: 6.02 lbs/gal, 0.721 kg/L), unknown type → null, volume→weight for L/gal/kg/lbs, override density |
 | `data/unit-preferences.js` | `convertValue` (pure function) | ~15 | Altitude ft→m with smart rounding (5000→1525), m→ft, altimeter inHg→hPa (29.92→1013.2), temperature C→F (15→59), fuel gal→L, empty/null/NaN → '', same unit → unchanged |
 
-### Total: ~415 test cases across 19 test files
+### Total: ~407 test cases across 19 test files
+
+### Integration Tests
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `sling-lsa.test.js` | ~19 | Profile validation, merger compatibility, all calcs produce POH values |
+| `cessna-172s.test.js` | ~26 | Profile validation, 3D takeoff interp, 2D landing/climb, arm-based W&B, dual envelopes |
 
 ### Manual / Integration Tests
 
@@ -1585,7 +1601,7 @@ Optional future enhancement:
 | Q9 | Storage architecture for fleet and profiles? | **Decided** | localStorage for settings + active ID; IndexedDB for types, fleet, sync metadata. Google Drive for optional cloud backup. |
 | Q10 | Google Drive integration approach? | **Decided** | Client-side OAuth 2.0 via Google Identity Services, `drive.appdata` scope (hidden folder), lazy-loaded GIS script. No backend. |
 | Q11 | Multiple instances of same type? | **Decided** | Yes — core use case. Flight schools may have multiple C172s with different weigh reports. |
-| Q12 | Bundled type profiles update strategy? | **Open** | Leaning toward: on app update, re-seed bundled types if a `dataVersion` field is newer. User's custom types are never overwritten. |
+| Q12 | Bundled type profiles update strategy? | **Decided** | `dataVersion` field in each profile compared on seed; `BUNDLED_DATA_VERSION` query param in fetch URL bypasses SW cache. |
 | Q13 | Community profile distribution? | **Open** | Leaning toward PR to repo → becomes bundled. Future: hosted registry. |
 | Q14 | CG envelope entry UX in profile wizard? | **Open** | Leaning toward coordinate pairs with live SVG preview. Click-to-place on canvas is complex and less precise for POH-derived data. |
 | Q15 | Google Drive sync granularity? | **Open** | Leaning toward few large files (`fleet.json`, `custom-types.json`, `preferences.json`). Fewer API calls, simpler conflict management. |
@@ -1602,19 +1618,17 @@ Optional future enhancement:
 ```
 app.js (entry point)
   ├── data/db.js ──────────── IndexedDB abstraction (types, fleet, syncMeta)
-  ├── data/profile-loader.js ── Load type profiles from IDB; seed bundled types
+  ├── data/profile-loader.js ── Seed bundled types (with SW cache busting), resolve active profile
   ├── data/profile-merger.js ── mergeProfile(type, instance) → runtime profile
-  ├── data/profile-migrator.js ─ v1 → v2 migration
-  ├── data/profile-validator.js ─ Comprehensive v2 profile validation
+  ├── data/profile-validator.js ─ Profile validation (errors + warnings)
   ├── ui/tabs.js ─────────── Tab navigation, keyboard support, URL hash sync
-  ├── ui/settings.js ─────── Theme, profile, units, reset; triggers initCalculators()
+  ├── ui/settings.js ─────── Theme, units, reset; links to fleet panel
   ├── ui/fleet.js ─────────── Fleet management (add/edit/remove aircraft instances)
-  ├── ui/wizard.js ────────── Profile creation wizard (multi-step form)
   ├── ui/density-altitude.js ── calc/density-altitude.js (formulas)
   ├── ui/crosswind.js ──────── calc/crosswind.js (trigonometry)
-  ├── ui/takeoff.js ────────── calc/takeoff.js → engine/perf-common.js (reference_table)
-  ├── ui/landing.js ────────── calc/landing.js → engine/perf-common.js (reference_table)
-  ├── ui/climb.js ──────────── calc/climb.js → engine/interpolation.js (1D + integration)
+  ├── ui/takeoff.js ────────── calc/takeoff.js (reference_table or table_interpolation)
+  ├── ui/landing.js ────────── calc/landing.js (reference_table or table_interpolation)
+  ├── ui/climb.js ──────────── calc/climb.js → engine/interpolation.js (1D or 2D + integration)
   ├── ui/cruise.js ─────────── calc/cruise.js → engine/interpolation.js (2D bilinear)
   ├── ui/weight-balance.js ─── calc/weight-balance.js → data/fuel-types.js
   └── ui/fuel.js ───────────── calc/fuel.js → engine/interpolation.js + calc/density-altitude.js
@@ -1623,16 +1637,14 @@ app.js (entry point)
 Shared modules:
 - `engine/units.js` — unit conversions, `formatNumber()`
 - `engine/margins.js` — safety margin application (percentage, fixed, roundUp)
-- `engine/interpolation.js` — 1D linear, 1D from table, 2D bilinear
+- `engine/interpolation.js` — 1D linear, 2D bilinear, 3D trilinear interpolation
 - `engine/perf-common.js` — shared takeoff/landing reference table logic
 - `data/storage.js` — localStorage wrapper with `flightperf_` prefix
 - `data/db.js` — IndexedDB wrapper (Promise-based CRUD for types, fleet, syncMeta)
 - `data/unit-preferences.js` — global unit system (7 types, smart rounding, display helpers)
 - `data/fuel-types.js` — fuel density registry (100LL, MOGAS, Jet-A, etc.)
 - `data/profile-merger.js` — type + instance → runtime profile (compatibility bridge)
-- `data/profile-validator.js` — comprehensive v2 profile validation (errors + warnings)
-- `data/profile-migrator.js` — v1 → v2 profile migration
-- `data/gdrive.js` — Google Drive backup/restore (lazy-loaded, optional)
+- `data/profile-validator.js` — profile validation with required field checks, physics rules, completeness warnings
 - `ui/perf-ui-common.js` — shared margin fieldset UI, distance results renderer, `esc()`, `displayUnit()`, `buildRefNote()`
 
 ### Calculator Summary
@@ -1641,9 +1653,9 @@ Shared modules:
 |-----------|------------|-------------------|--------------|
 | Density Alt | Formula | None | No |
 | Crosswind | Trigonometry | `limits.maxCrosswind` | Yes (compass diagram) |
-| Takeoff | Reference table + margins | `performance.takeoff` | No |
-| Landing | Reference table + margins | `performance.landing` | No |
-| Climb | 1D interpolation + integration | `performance.climb`, `speeds` | No |
+| Takeoff | Reference table OR 2D/3D interpolation + corrections | `performance.takeoff` | No |
+| Landing | Reference table OR 2D interpolation + corrections | `performance.landing` | No |
+| Climb | 1D or 2D interpolation + integration | `performance.climb`, `speeds` | No |
 | Cruise | 2D interpolation | `performance.cruise`, `performance.fuelConsumption`, `fuel` | No |
 | W&B | Station summation + point-in-polygon | `weightBalance`, `limits`, `fuel` | Yes (envelope chart) |
 | Fuel | 1D + 2D interpolation | `performance.fuelConsumption`, `performance.cruise`, `fuel` | No |
@@ -1654,8 +1666,21 @@ Shared modules:
 
 | Method | Used By | Description |
 |--------|---------|-------------|
-| `reference_table` | Takeoff, Landing | Single reference condition with surface-type variants |
-| `table_interpolation` | Climb (1D), Cruise (2D), Fuel Consumption (1D) | Multi-dimensional interpolation between data points |
+| `reference_table` | Takeoff, Landing (Sling LSA) | Single reference condition with surface-type variants |
+| `table_interpolation` | Takeoff (2D/3D), Landing (2D), Climb (1D/2D), Cruise (2D), Fuel (1D) | Multi-dimensional interpolation; plain numbers in data, units at section level |
+
+### Supported Interpolation Dimensions
+
+| Calculator | Sling LSA | Cessna 172S |
+|-----------|-----------|-------------|
+| Takeoff | reference_table (surface lookup) | 3D (weight × altitude × temperature) |
+| Landing | reference_table (surface lookup) | 2D (altitude × temperature) |
+| Climb | 1D (altitude) | 2D (altitude × temperature) |
+| Cruise | 2D (altitude × RPM) | 3D (altitude × RPM × ISA deviation) |
+
+### Service Worker Cache Strategy
+
+The SW uses **cache-first** for all app shell files. Bundled profile JSON files are fetched with a `?v=${BUNDLED_DATA_VERSION}` query parameter to bypass the SW cache when profiles are updated. This ensures `seedBundledTypes()` always gets the latest profile from disk/network, while the `dataVersion` field in each profile controls whether IndexedDB is re-seeded.
 
 ### Storage Keys
 
@@ -1719,21 +1744,25 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 | Profile obstacle height configurable | ICAO uses 15m, FAA uses 50ft; profile specifies which |
 | Fuel density from registry, not profile | Fuel type can change (100LL vs MOGAS); pilot preference, not aircraft property |
 | Smart rounding on unit conversion | Pilot-friendly numbers; 5000 ft → 1525 m, not 1524 m |
+| Type/instance profile separation | Type = shared POH data, instance = per-airplane (registration, weigh report). Merger produces runtime profile compatible with all calc modules. |
+| SW cache busting for bundled profiles | `BUNDLED_DATA_VERSION` query param on fetch URLs bypasses SW cache-first strategy when profiles change |
+| Plain numbers in interpolation data | `table_interpolation` data arrays use plain numbers with `units` declaration at section level — compact, fast, no accessor overhead |
 
 ### Codebase Statistics
 
 | Category | Count |
 |----------|-------|
-| Total JS files | 32 |
+| Total JS source files | 31 (8 calc, 12 ui, 7 data, 4 engine) |
 | Total CSS files | 3 |
-| Total lines of JS | ~3,400 |
-| Total lines of CSS | ~830 |
+| Total lines of JS | ~6,200 |
+| Total lines of CSS | ~880 |
 | Test files | 19 |
-| Test cases | 415 |
+| Test cases | 407 |
 | Calculators | 8 |
+| Bundled aircraft profiles | 2 (Sling LSA, Cessna 172S) |
+| Total profile data points | ~380 (Sling: ~30, Cessna: ~350) |
 | Global unit types | 7 |
 | Fuel types supported | 6 |
-| Profile data points | ~60 (climb: 4, cruise: 20, fuel: 5, takeoff: 2, landing: 2, W&B stations: 5, etc.) |
 
 ---
 
@@ -1755,4 +1784,4 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 ---
 
-*Last updated: 2026-03-10 — Phase 3 Aircraft Data System architecture added*
+*Last updated: 2026-03-15 — Phase 3C complete, documentation refresh*

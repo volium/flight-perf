@@ -16,9 +16,9 @@
 |-----------|-------------|
 | **Takeoff** | Ground roll & obstacle clearance distance with safety margins |
 | **Landing** | Ground roll & obstacle clearance distance with safety margins |
-| **Climb** | Time to climb, ROC interpolation, cruise climb transition |
-| **Cruise** | TAS/IAS from altitude × RPM, density-corrected fuel flow, endurance, range |
-| **W&B** | Station weights, CG in %MAC or arm, envelope chart (SVG) |
+| **Climb** | Time to climb, ROC interpolation (1D or 2D), cruise climb transition |
+| **Cruise** | TAS from altitude × RPM (2D/3D), density-corrected fuel flow, endurance, range |
+| **W&B** | Station weights, CG in %MAC or arm (inches), envelope chart (SVG), dual envelopes |
 | **Density Alt** | Pressure altitude, density altitude, ISA deviation |
 | **Crosswind** | Head/tail/crosswind components with SVG diagram, dual runway display |
 | **Fuel** | Trip fuel, reserves, usable fuel, endurance, range |
@@ -26,7 +26,9 @@
 ### Key Features
 
 - **100% Offline** — Works without internet after initial load (PWA with Service Worker).
-- **Aircraft Profiles** — Extensible JSON-based profiles supporting reference tables, interpolation tables, and formulas.
+- **Fleet Management** — Add multiple aircraft to your fleet, each linked to a type profile. Switch between aircraft from the header dropdown.
+- **Aircraft Type Profiles** — Extensible JSON-based profiles supporting reference tables, 2D/3D interpolation tables, and formulas. Two bundled profiles: Sling LSA and Cessna 172S.
+- **Type/Instance Architecture** — Type profiles contain shared POH data for a make/model. Instances contain per-airplane data (registration, empty weight from weigh report). The merger combines them into a runtime profile for the calculators.
 - **Global Unit Preferences** — Set altitude (ft/m), distance (ft/m), altimeter (inHg/hPa), temperature (°C/°F), weight (kg/lbs), and fuel (L/US gal) once in Settings — all calculators adapt. Values convert with smart rounding when switching units.
 - **Safety Margins** — Configurable percentage or fixed distance margins with round-up option.
 - **Responsive** — Designed for desktop monitors, tablets, and phones.
@@ -37,37 +39,19 @@
 ## Documentation
 
 - **[PLAN.md](PLAN.md)** — Full project plan, architecture, data schemas, development phases, and open decisions.
+- **[Profile Schema](profiles/schema/type-profile-v1.md)** — Aircraft type profile schema reference.
 
 ## Quick Start
 
 ```bash
 git clone https://github.com/volium/flight-perf.git
 cd flight-perf
+npm install   # install dev dependencies (vitest for testing)
 ```
 
 The app uses ES Modules, which require an HTTP server — opening `index.html` directly via `file://` will not work. Choose one of the options below to serve the app locally.
 
-### Option 1: Node.js (`npx serve`)
-
-If you don't have Node.js installed, install it first via [Homebrew](https://brew.sh/) (macOS):
-
-```bash
-# Install Homebrew (skip if already installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Node.js (includes npm and npx)
-brew install node
-```
-
-Then serve the app:
-
-```bash
-npx serve .
-```
-
-Open the URL shown in the terminal (typically `http://localhost:3000`).
-
-### Option 2: Python (`http.server`)
+### Option 1: Python (`http.server`)
 
 Python 3 is pre-installed on macOS. No additional setup required:
 
@@ -77,42 +61,98 @@ python3 -m http.server 8000
 
 Open `http://localhost:8000` in your browser.
 
-### Option 3: PHP built-in server
-
-If PHP is available on your system:
+### Option 2: Node.js (`npx serve`)
 
 ```bash
-php -S localhost:8000
+npx serve .
 ```
 
-Open `http://localhost:8000` in your browser.
+Open the URL shown in the terminal (typically `http://localhost:3000`).
 
-### Option 4: VS Code Live Server
+### Option 3: VS Code Live Server
 
 If you use VS Code, install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension and click **Go Live** in the status bar.
 
+### Running Tests
+
+```bash
+npm test              # run all tests once
+npm run test:watch    # watch mode (re-runs on file save)
+npx vitest run tests/engine/   # run a specific directory
+npx vitest run tests/calc/climb.test.js   # run a single file
+```
+
+### Development Notes
+
+- **Service Worker caching**: During development, the SW caches files aggressively. If you change profile JSON files or add new modules, bump `CACHE_VERSION` in `sw.js` and `BUNDLED_DATA_VERSION` in `js/data/profile-loader.js`, then hard-refresh (Cmd+Shift+R).
+- **IndexedDB**: Bundled profiles are seeded into IndexedDB on first load. To force re-seeding, clear IndexedDB via DevTools → Application → IndexedDB → delete `flightperf`.
+- **No build step**: All source files are served directly. No transpilation or bundling required.
+
 ## Project Status
 
-🟢 **Phase 2 In Progress** — All 8 calculators complete, global unit preferences implemented, W&B improvements done. See [PLAN.md](PLAN.md) for the full roadmap.
+🟢 **Phase 3C Complete** — Aircraft data system (type/instance architecture, IndexedDB, fleet management), two bundled profiles (Sling LSA, Cessna 172S), 3D interpolation engine. See [PLAN.md](PLAN.md) for the full roadmap.
+
+**Next up:** Phase 3D (Profile Creation Wizard), Phase 3E (Google Drive Backup), Phase 4 (Calculation Improvements), Phase 5 (Flight Planning Integration).
 
 ## Aircraft Profiles
 
-Profiles are JSON files stored in `/profiles/`. See the [Profile JSON Schema](PLAN.md#4-aircraft-profile-system) in the plan document for the full specification.
+Profiles are JSON files stored in `profiles/types/`. See the [Profile Schema](profiles/schema/type-profile-v1.md) for the full specification.
 
-The bundled profile is for a **Sling LSA (N246LT)** — a Sling Aircraft light-sport airplane with a Rotax 912 iS engine.
+### Bundled Profiles
 
-To add a new aircraft:
-1. Create a JSON file following the schema in `PLAN.md`.
-2. Place it in the `profiles/` directory.
+| Profile | Aircraft | Key Features |
+|---------|----------|-------------|
+| `sling-lsa.json` | Sling LSA (Rotax 912 iS) | %MAC CG, metric-primary, reference_table takeoff/landing |
+| `cessna-172s.json` | Cessna 172S Skyhawk SP (IO-360-L2A) | Arm-based CG, imperial, 3D takeoff (weight×alt×temp), dual envelopes |
+
+### Adding a New Profile
+
+1. Create a JSON file following the [schema](profiles/schema/type-profile-v1.md).
+2. Place it in `profiles/types/`.
+3. Add it to `BUNDLED_TYPE_URLS` in `js/data/profile-loader.js`.
+4. Add it to `APP_SHELL` in `sw.js`.
+5. Bump `BUNDLED_DATA_VERSION` in `js/data/profile-loader.js`.
+
+## Architecture
+
+```
+UI Layer                Calc Layer              Engine Layer
+-----------             -----------             -------------------
+takeoff    ---------->  takeoff    ---------->  interpolation (1D/2D/3D)
+landing                 landing                 margins
+climb                   climb                   perf-common
+cruise                  cruise                  units
+W&B                     W&B
+density                 density
+crosswind               crosswind               Data Layer
+fuel                    fuel                    -------------------
+fleet                                           db.js (IndexedDB)
+settings                                        profile-loader
+                                                profile-merger
+        getProfile() <------------------------  profile-validator
+                                                fuel-types
+                                                unit-preferences
+                                                storage (localStorage)
+
+Storage
+-------------------
+Service Worker (PWA cache)      IndexedDB (types, fleet)
+```
+
+### Key Patterns
+
+- **Type/Instance Split**: Type profiles (POH data) are shared. Instances (per-airplane) override empty weight/CG. The merger combines them into a runtime profile that calc modules consume unchanged.
+- **Method-Aware Calculators**: Takeoff/landing support `reference_table` (surface lookup) and `table_interpolation` (multi-dimensional grid). The UI adapts inputs based on the method.
+- **Plain Numbers in Data**: All `table_interpolation` data arrays use plain numbers with a `units` declaration at the section level — no ValueWithUnit wrappers in data rows.
 
 ## Technology
 
 - **Zero production dependencies** — pure HTML5, CSS3 (custom properties), and vanilla JavaScript (ES Modules).
-- **~3,400 lines of JS** across 27 modules (8 calculator UIs, 8 calc engines, 4 engine modules, 4 data modules, 3 shared UI modules).
-- **~830 lines of CSS** with CSS custom properties for theming (light/dark).
-- **PWA** — Service Worker caches all 38 assets for offline use; installable on mobile and desktop.
+- **~6,200 lines of JS** across 31 source modules + 19 test files (407 tests).
+- **~880 lines of CSS** with CSS custom properties for theming (light/dark).
+- **PWA** — Service Worker caches all assets for offline use; installable on mobile and desktop.
+- **Vitest** — Test framework with `@/` alias for `js/` directory. `fake-indexeddb` for IDB tests.
 - **No build step** — serve the files directly from any HTTP server.
-- **Detailed documentation** — see [PLAN.md](PLAN.md) Section 15 (Implementation Reference) for module architecture, storage keys, conventions, and design decisions.
 
 ## License
 

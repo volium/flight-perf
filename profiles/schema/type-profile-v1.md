@@ -25,7 +25,7 @@
 8. [weightBalance — Optional](#8-weightbalance--optional)
 9. [performance — Optional](#9-performance--optional)
 10. [Aircraft Instance Schema](#10-aircraft-instance-schema)
-11. [v1 → v2 Migration Mapping](#11-v1--v2-migration-mapping)
+11. [Migration Notes](#11-migration-notes)
 12. [Valid Enums](#12-valid-enums)
 13. [Changelog](#13-changelog)
 
@@ -184,8 +184,8 @@ Weight limits and reference weights. Units should be consistent within this sect
 |-------|------|----------|-------------|
 | `maxTakeoffWeight` | `ValueWithUnit` | ✅ | Maximum takeoff weight (MTOW) |
 | `maxLandingWeight` | `ValueWithUnit` | ✅ | Maximum landing weight (often same as MTOW for light aircraft) |
-| `referenceEmptyWeight` | `ValueWithUnit` | ✅ | **v2 field** — Typical/POH empty weight. Overridable by aircraft instance. |
-| `referenceEmptyCG` | `object` | ✅ | **v2 field** — Typical/POH empty CG. Format depends on `weightBalance.cgReference`. See below. |
+| `referenceEmptyWeight` | `ValueWithUnit` | ✅ | Typical/POH empty weight. Overridable by aircraft instance. |
+| `referenceEmptyCG` | `object` | ✅ | Typical/POH empty CG. Format depends on `weightBalance.cgReference`. See below. |
 | `baggageMaxWeight` | `ValueWithUnit` | Optional | Maximum total baggage weight |
 | `maxCrosswind` | `ValueWithUnit` | Optional | Max demonstrated crosswind component |
 
@@ -276,7 +276,7 @@ Weight & balance configuration. If absent, the W&B calculator is disabled for th
 | `cgReference` | `string` | ✅ | `"arm"` or `"percent_mac"` |
 | `cgUnit` | `string` | ✅ | Display unit for CG — `"in"`, `"mm"`, `"%"` |
 | `weightUnit` | `string` | ✅ | Weight unit used in envelope definitions — `"kg"` or `"lbs"` |
-| `armUnit` | `string` | Optional | Unit for station arms — `"in"` or `"mm"`. Defaults to same as `cgUnit` |
+| `armUnit` | `string` | ✅ Required | Unit for station arms — `"in"` or `"mm"` |
 | `macLeadingEdge` | `ValueWithUnit` | Required if `cgReference` = `"percent_mac"` | Leading edge of MAC |
 | `macLength` | `ValueWithUnit` | Required if `cgReference` = `"percent_mac"` | Length of MAC |
 | `stations` | `Station[]` | ✅ | Loading stations |
@@ -508,19 +508,17 @@ Matches the CG reference system of the linked type profile:
 
 ---
 
-## 11. v1 → v2 Migration Mapping
+## 11. Migration Notes
 
-| v1 Location | v2 Location | Change |
-|-------------|-------------|--------|
-| `profileVersion: "1.0"` | `schemaVersion: "1.0"` | Renamed |
-| `aircraft.tailNumber` | *(removed from type)* | Moved to instance `registration` |
-| `limits.emptyWeight` | `limits.referenceEmptyWeight` | Renamed — now a reference default |
-| `limits.usefulLoad` | *(removed)* | Computed at runtime: `MTOW − emptyWeight` |
-| `weightBalance.emptyCG` | `limits.referenceEmptyCG` | Moved from W&B to limits |
-| *(new)* | `source` | Added — `"bundled"` or `"custom"` |
-| *(new)* | `aircraft.icaoType` | Added — optional ICAO designator |
+The original v1 monolithic profile format (with `profileVersion: "1.0"`, embedded `tailNumber`, `emptyWeight` in limits) was removed before the first release. No migration code exists or is needed. All profiles use the current schema with `schemaVersion: "1.0"`.
 
-All other fields remain unchanged in structure and location.
+| Original Field | Current Field | Notes |
+|----------------|---------------|-------|
+| `profileVersion` | `schemaVersion` | Renamed |
+| `aircraft.tailNumber` | *(removed)* | Moved to aircraft instance |
+| `limits.emptyWeight` | `limits.referenceEmptyWeight` | POH reference value |
+| `weightBalance.emptyCG` | `limits.referenceEmptyCG` | POH reference value |
+| `limits.usefulLoad` | *(removed)* | Computed at runtime by merger |
 
 ---
 
