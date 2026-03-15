@@ -815,3 +815,82 @@ select.form-input {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
 }
+
+/* ── Google Drive Backup ── */
+
+.gdrive-section {
+  margin-bottom: var(--space-md);
+}
+
+.gdrive-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.gdrive-status__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--color-success);
+  flex-shrink: 0;
+}
+
+.gdrive-status__email {
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.gdrive-backup-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.gdrive-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.gdrive-disconnect {
+  display: block;
+  margin-top: var(--space-sm);
+  background: none;
+  border: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.gdrive-disconnect:hover {
+  color: var(--color-error);
+}
+
+.gdrive-feedback:empty {
+  display: none;
+}
+
+.gdrive-feedback {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) 0;
+}
+
+.gdrive-feedback--success {
+  color: var(--color-success);
+}
+
+.gdrive-feedback--error {
+  color: var(--color-error);
+}
+
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

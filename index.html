@@ -172,6 +172,30 @@
         </select>
       </div>
 
+      <div class="settings-section-label">Cloud Backup</div>
+
+      <div id="gdrive-section" class="gdrive-section">
+        <div id="gdrive-disconnected" class="gdrive-state">
+          <p class="form-hint">Back up your fleet and preferences to Google Drive.</p>
+          <button class="btn btn-block" id="gdrive-connect">Connect Google Drive</button>
+        </div>
+
+        <div id="gdrive-connected" class="gdrive-state" style="display:none">
+          <div class="gdrive-status">
+            <span class="gdrive-status__dot"></span>
+            <span class="gdrive-status__email" id="gdrive-email"></span>
+          </div>
+          <div class="gdrive-backup-time" id="gdrive-backup-time"></div>
+          <div class="gdrive-actions">
+            <button class="btn btn-block" id="gdrive-backup">Backup Now</button>
+            <button class="btn btn-block btn-secondary" id="gdrive-restore">Restore from Backup</button>
+          </div>
+          <button class="gdrive-disconnect" id="gdrive-disconnect">Disconnect</button>
+        </div>
+
+        <div id="gdrive-feedback" class="gdrive-feedback" aria-live="polite"></div>
+      </div>
+
       <div class="settings-section-label">Data</div>
 
       <button class="btn btn-danger btn-block" id="setting-reset">Reset All Inputs</button>

@@ -7,7 +7,7 @@
 | **Project** | flight-perf |
 | **Repository** | GitHub — hosted via GitHub Pages |
 | **Created** | 2026-03-07 |
-| **Status** | Phase 3C Complete |
+| **Status** | Phase 3E Complete (3E.5 deferred) |
 
 ---
 
@@ -1179,11 +1179,11 @@ For users who want cross-device sync or cloud backup, the app supports optional 
 |--------|--------|
 | **Auth** | Google Identity Services (GIS) — client-side OAuth 2.0, no backend |
 | **Scope** | `drive.appdata` — hidden app-specific folder, can't access user's files |
-| **Data format** | JSON files in `appDataFolder`: `fleet.json`, `custom-types.json`, `preferences.json` |
-| **Sync strategy** | Manual with auto-prompt — "Backup Now" button + prompt after significant changes |
-| **Conflict resolution** | Last-write-wins with timestamps; local is source of truth |
-| **Script loading** | GIS library (~30 KB) lazy-loaded only when user navigates to Settings → Google Drive |
-| **Offline** | Operates normally; sync button shows "Offline — will sync when connected" |
+| **Data format** | Single JSON file (`flight-perf-backup.json`) in `appDataFolder` containing fleet instances, custom types, and preferences |
+| **Sync strategy** | Manual only — "Backup Now" and "Restore from Backup" buttons in Settings |
+| **Conflict resolution** | Last-write-wins; restore upserts into local IDB by key |
+| **Script loading** | GIS library (~30 KB) lazy-loaded only when user clicks "Connect Google Drive" |
+| **Offline** | Operates normally; Connect button fails gracefully with error message |
 | **Requirements** | Google Cloud project with OAuth client ID configured for `volium.github.io` |
 
 ### Offline Indicator
@@ -1280,6 +1280,7 @@ flight-perf/
 │       ├── profile-merger.js   # mergeProfile(type, instance) → runtime profile
 │       ├── profile-validator.js # Comprehensive profile validation (errors + warnings)
 │       ├── fuel-types.js       # Built-in fuel type registry (100LL, MOGAS, Jet-A, etc.)
+│       ├── gdrive.js           # Google Drive backup/restore (GIS auth, appDataFolder)
 │       ├── unit-preferences.js # Global unit preferences, conversion, smart rounding
 │       └── storage.js          # localStorage abstraction with prefix namespacing
 │
@@ -1303,6 +1304,7 @@ flight-perf/
 │   │   ├── profile-merger.test.js   # Type+instance merge, fallback
 │   │   ├── profile-loader.test.js   # IDB resolution, seeding, auto-create
 │   │   ├── fuel-types.test.js       # Fuel type registry tests
+│   │   ├── gdrive.test.js           # Google Drive backup/restore tests
 │   │   └── unit-preferences.test.js # convertValue, smart rounding tests
 │   └── integration/
 │       ├── sling-lsa.test.js        # Sling LSA profile validation + calc compat
@@ -1417,13 +1419,13 @@ flight-perf/
 
 #### Phase 3E — Google Drive Backup
 
-| Task | Description | Depends On |
-|------|-------------|------------|
-| 3E.1 | **Google Drive module** (`js/data/gdrive.js`) — GIS auth, appDataFolder CRUD, lazy script loading | 3A.1 |
-| 3E.2 | **Settings UI** for Google Drive — sign in/out, last sync time, manual backup/restore buttons | 3E.1 |
-| 3E.3 | **Backup flow** — serialize fleet + custom types + preferences → JSON files in appDataFolder | 3E.1 |
-| 3E.4 | **Restore flow** — download from appDataFolder → merge into local IDB (conflict resolution: local wins with flag) | 3E.1, 3E.3 |
-| 3E.5 | **Auto-prompt** — after significant changes (add/edit/remove aircraft, import profile), suggest backup if signed in | 3E.3 |
+| Task | Description | Depends On | Status |
+|------|-------------|------------|--------|
+| 3E.1 | **Google Drive module** (`js/data/gdrive.js`) — GIS auth, appDataFolder CRUD, lazy script loading | 3A.1 | ✅ |
+| 3E.2 | **Settings UI** for Google Drive — sign in/out, last sync time, manual backup/restore buttons | 3E.1 | ✅ |
+| 3E.3 | **Backup flow** — serialize fleet + custom types + preferences → JSON file in appDataFolder | 3E.1 | ✅ |
+| 3E.4 | **Restore flow** — download from appDataFolder → upsert into local IDB + localStorage | 3E.1, 3E.3 | ✅ |
+| 3E.5 | **Auto-prompt** — after significant changes, suggest backup if signed in | 3E.3 | Deferred (manual only) |
 
 ### Phase 4 — Calculation Improvements & Polish
 
@@ -1500,6 +1502,7 @@ tests/
 │   ├── profile-merger.test.js   ─ Type+instance merge, fallback
 │   ├── profile-loader.test.js   ─ IDB resolution, seeding, auto-create
 │   ├── fuel-types.test.js       ─ Fuel type registry, volume→weight
+│   ├── gdrive.test.js           ─ Google Drive auth, backup, restore, error handling
 │   └── unit-preferences.test.js ─ convertValue, smart rounding
 └── integration/
     ├── sling-lsa.test.js        ─ Sling LSA profile validation + calc compat
@@ -1539,8 +1542,9 @@ tests/
 | `data/profile-loader.js` | `resolveProfile`, `resolveDefaultProfile`, `seedTypesFromData`, `autoCreateDefaultInstance`, `validateProfile` | ~16 | IDB-based profile resolution (instance+type→merge), default profile fallback, type seeding from data, auto-create instance from type defaults, legacy validateProfile compat |
 | `data/fuel-types.js` | `getFuelType`, `getAllFuelTypes`, `fuelVolumeToWeight` | ~10 | Known types (100LL: 6.02 lbs/gal, 0.721 kg/L), unknown type → null, volume→weight for L/gal/kg/lbs, override density |
 | `data/unit-preferences.js` | `convertValue` (pure function) | ~15 | Altitude ft→m with smart rounding (5000→1525), m→ft, altimeter inHg→hPa (29.92→1013.2), temperature C→F (15→59), fuel gal→L, empty/null/NaN → '', same unit → unchanged |
+| `data/gdrive.js` | `loadGIS`, `signIn`, `signOut`, `isSignedIn`, `getSignedInEmail`, `getStoredEmail`, `getLastBackupTime`, `backup`, `restore` | ~34 | GIS script loading, OAuth sign-in/out, auth state management, backup serialization (excludes bundled types), restore (upsert into IDB + localStorage), error handling (not signed in, no backup, invalid data), empty fleet backup |
 
-### Total: ~407 test cases across 19 test files
+### Total: ~441 test cases across 20 test files
 
 ### Integration Tests
 
@@ -1604,8 +1608,8 @@ Optional future enhancement:
 | Q12 | Bundled type profiles update strategy? | **Decided** | `dataVersion` field in each profile compared on seed; `BUNDLED_DATA_VERSION` query param in fetch URL bypasses SW cache. |
 | Q13 | Community profile distribution? | **Open** | Leaning toward PR to repo → becomes bundled. Future: hosted registry. |
 | Q14 | CG envelope entry UX in profile wizard? | **Open** | Leaning toward coordinate pairs with live SVG preview. Click-to-place on canvas is complex and less precise for POH-derived data. |
-| Q15 | Google Drive sync granularity? | **Open** | Leaning toward few large files (`fleet.json`, `custom-types.json`, `preferences.json`). Fewer API calls, simpler conflict management. |
-| Q16 | Google Cloud project ownership for OAuth client ID? | **Open** | GCP project needed before Phase 3E.1. |
+| Q15 | Google Drive sync granularity? | **Decided** | Single JSON file (`flight-perf-backup.json`) in appDataFolder containing fleet, custom types, and preferences. Simplest approach — one file, one upload/download. |
+| Q16 | Google Cloud project ownership for OAuth client ID? | **Decided** | GCP project required. Client ID hardcoded in `js/data/gdrive.js`. Authorized origins: localhost + GitHub Pages domain. |
 
 ---
 
@@ -1621,6 +1625,7 @@ app.js (entry point)
   ├── data/profile-loader.js ── Seed bundled types (with SW cache busting), resolve active profile
   ├── data/profile-merger.js ── mergeProfile(type, instance) → runtime profile
   ├── data/profile-validator.js ─ Profile validation (errors + warnings)
+  ├── data/gdrive.js ────────── Google Drive backup/restore (GIS auth, appDataFolder CRUD)
   ├── ui/tabs.js ─────────── Tab navigation, keyboard support, URL hash sync
   ├── ui/settings.js ─────── Theme, units, reset; links to fleet panel
   ├── ui/fleet.js ─────────── Fleet management (add/edit/remove aircraft instances)
@@ -1645,6 +1650,7 @@ Shared modules:
 - `data/fuel-types.js` — fuel density registry (100LL, MOGAS, Jet-A, etc.)
 - `data/profile-merger.js` — type + instance → runtime profile (compatibility bridge)
 - `data/profile-validator.js` — profile validation with required field checks, physics rules, completeness warnings
+- `data/gdrive.js` — Google Drive backup/restore: GIS lazy-loading, OAuth sign-in/out, Drive API backup/restore via appDataFolder
 - `ui/perf-ui-common.js` — shared margin fieldset UI, distance results renderer, `esc()`, `displayUnit()`, `buildRefNote()`
 
 ### Calculator Summary
@@ -1698,6 +1704,14 @@ The SW uses **cache-first** for all app shell files. Bundled profile JSON files 
 | `flightperf_crosswind_inputs` | `{ windDirection, windSpeed, gustSpeed, runwayHeading }` | Yes |
 | `flightperf_fuel_inputs` | `{ tripDistance, cruiseAltitude, altimeter, rpm, fuelOnBoard, reserveMinutes }` | Yes |
 
+#### syncMeta Store Keys (IndexedDB)
+
+| Key | Contents | Set By |
+|-----|----------|--------|
+| `gdriveEmail` | Last signed-in Google email (display hint) | `gdrive.js` signIn |
+| `gdriveFileId` | Drive file ID of the backup file | `gdrive.js` backup |
+| `lastBackupTime` | ISO timestamp of last successful backup | `gdrive.js` backup |
+
 ### Form ID Prefixes
 
 | Calculator | Prefix | Examples |
@@ -1711,6 +1725,7 @@ The SW uses **cache-first** for all app shell files. Bundled profile JSON files 
 | W&B | `wb-` | `wb-pilot`, `wb-fuel`, `wb-fuel-weight` |
 | Fuel Planner | `fp-` | `fp-distance`, `fp-fob`, `fp-fob-weight` |
 | Settings | `setting-` | `setting-theme`, `setting-altitude` |
+| Google Drive | `gdrive-` | `gdrive-connect`, `gdrive-backup`, `gdrive-restore` |
 
 ### Unit Preferences — Conversion on Change
 
@@ -1752,12 +1767,12 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 | Category | Count |
 |----------|-------|
-| Total JS source files | 31 (8 calc, 12 ui, 7 data, 4 engine) |
+| Total JS source files | 32 (8 calc, 12 ui, 8 data, 4 engine) |
 | Total CSS files | 3 |
-| Total lines of JS | ~6,200 |
-| Total lines of CSS | ~880 |
-| Test files | 19 |
-| Test cases | 407 |
+| Total lines of JS | ~6,500 |
+| Total lines of CSS | ~950 |
+| Test files | 20 |
+| Test cases | 441 |
 | Calculators | 8 |
 | Bundled aircraft profiles | 2 (Sling LSA, Cessna 172S) |
 | Total profile data points | ~380 (Sling: ~30, Cessna: ~350) |
@@ -1784,4 +1799,4 @@ All arithmetic runs in the user's **display weight unit** to avoid floating poin
 
 ---
 
-*Last updated: 2026-03-15 — Phase 3C complete, documentation refresh*
+*Last updated: 2026-03-14 — Phase 3E complete (Google Drive backup/restore)*

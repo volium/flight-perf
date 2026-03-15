@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'flightperf-v3';
+const CACHE_VERSION = 'flightperf-v4';
 
 const APP_SHELL = [
   './',
@@ -38,6 +38,7 @@ const APP_SHELL = [
   './js/data/profile-merger.js',
   './js/data/db.js',
   './js/data/storage.js',
+  './js/data/gdrive.js',
   './js/data/unit-preferences.js',
   './profiles/types/sling-lsa.json',
   './profiles/types/cessna-172s.json',

@@ -33,6 +33,7 @@
 - **Safety Margins** — Configurable percentage or fixed distance margins with round-up option.
 - **Responsive** — Designed for desktop monitors, tablets, and phones.
 - **Dark Mode** — Automatic (follows system) or manual toggle.
+- **Google Drive Backup** — Manual backup/restore of fleet, custom types, and preferences to a hidden Google Drive folder. No backend required.
 - **Zero Dependencies** — Pure HTML, CSS, and JavaScript. No frameworks, no build step.
 - **GitHub Pages** — Static hosting, no backend.
 
@@ -90,9 +91,9 @@ npx vitest run tests/calc/climb.test.js   # run a single file
 
 ## Project Status
 
-🟢 **Phase 3C Complete** — Aircraft data system (type/instance architecture, IndexedDB, fleet management), two bundled profiles (Sling LSA, Cessna 172S), 3D interpolation engine. See [PLAN.md](PLAN.md) for the full roadmap.
+🟢 **Phase 3E Complete** — Google Drive backup/restore (manual backup/restore of fleet, custom types, and preferences to Google Drive appDataFolder). See [PLAN.md](PLAN.md) for the full roadmap.
 
-**Next up:** Phase 3D (Profile Creation Wizard), Phase 3E (Google Drive Backup), Phase 4 (Calculation Improvements), Phase 5 (Flight Planning Integration).
+**Next up:** Phase 3D (Profile Creation Wizard), Phase 4 (Calculation Improvements), Phase 5 (Flight Planning Integration).
 
 ## Aircraft Profiles
 
@@ -148,7 +149,7 @@ Service Worker (PWA cache)      IndexedDB (types, fleet)
 ## Technology
 
 - **Zero production dependencies** — pure HTML5, CSS3 (custom properties), and vanilla JavaScript (ES Modules).
-- **~6,200 lines of JS** across 31 source modules + 19 test files (407 tests).
+- **~6,500 lines of JS** across 32 source modules + 20 test files (441 tests).
 - **~880 lines of CSS** with CSS custom properties for theming (light/dark).
 - **PWA** — Service Worker caches all assets for offline use; installable on mobile and desktop.
 - **Vitest** — Test framework with `@/` alias for `js/` directory. `fake-indexeddb` for IDB tests.
