@@ -9,6 +9,8 @@ import { initClimb } from './ui/climb.js';
 import { initCruise } from './ui/cruise.js';
 import { initWeightBalance } from './ui/weight-balance.js';
 import { initFuel } from './ui/fuel.js';
+import { initAirport } from './ui/airport.js';
+import { preload as preloadAirports } from './data/ourairports.js';
 import { seedBundledTypes, resolveActiveProfile, resolveProfile } from './data/profile-loader.js';
 import { storage } from './data/storage.js';
 
@@ -51,6 +53,7 @@ async function init() {
   }
 
   initCalculators();
+  initAirport(document.getElementById('panel-airport'));
 
   // First run — no aircraft configured: open fleet panel automatically
   if (!state.profile) {
@@ -62,6 +65,9 @@ async function init() {
   window.addEventListener('offline', updateOnlineStatus);
 
   registerServiceWorker();
+
+  // Preload OurAirports CSV data in the background (fire-and-forget)
+  if (navigator.onLine) preloadAirports();
 }
 
 export function initCalculators() {

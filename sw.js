@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'flightperf-v4';
+const CACHE_VERSION = 'flightperf-v6';
 
 const APP_SHELL = [
   './',
@@ -19,6 +19,8 @@ const APP_SHELL = [
   './js/ui/cruise.js',
   './js/ui/weight-balance.js',
   './js/ui/fuel.js',
+  './js/ui/airport.js',
+  './js/data/ourairports.js',
   './js/ui/perf-ui-common.js',
   './js/calc/density-altitude.js',
   './js/calc/crosswind.js',
@@ -28,6 +30,7 @@ const APP_SHELL = [
   './js/calc/cruise.js',
   './js/calc/weight-balance.js',
   './js/calc/fuel.js',
+  './js/calc/wx-decode.js',
   './js/engine/units.js',
   './js/engine/margins.js',
   './js/engine/perf-common.js',
